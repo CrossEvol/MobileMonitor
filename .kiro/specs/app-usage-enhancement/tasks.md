@@ -18,7 +18,11 @@
   - Add app metadata retrieval using PackageManager for app names and icons
   - _Requirements: 2.3, 2.4, 3.1, 3.2, 3.3_
 
-- [ ] 3. Create UsageStatsViewModel with state management
+- [x] 3. Create UsageStatsViewModel with state management
+
+
+
+
   - Implement ViewModel with StateFlow for UI state and selected filter
   - Add coroutine-based data loading with proper error handling
   - Implement permission checking and state updates
