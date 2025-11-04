@@ -30,7 +30,11 @@
   - Handle loading states and error scenarios
   - _Requirements: 2.2, 3.4, 5.1, 5.3_
 
-- [ ] 4. Implement time formatting utility
+- [x] 4. Implement time formatting utility
+
+
+
+
   - Create utility function to format milliseconds into readable time strings
   - Handle seconds format for usage less than 1 minute
   - Handle hours and minutes format for longer usage times
