@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Create data models and enums
+- [x] 1. Create data models and enums
   - Define AppUsageInfo data class with package name, app name, icon, last used time, and total usage time
   - Create TimeFilter enum with Daily, Weekly, Monthly, Yearly options and their corresponding day values
   - Define UsageStatsState sealed class for Loading, Success, Error, and PermissionRequired states
