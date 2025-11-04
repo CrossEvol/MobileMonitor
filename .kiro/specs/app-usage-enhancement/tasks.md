@@ -6,7 +6,11 @@
   - Define UsageStatsState sealed class for Loading, Success, Error, and PermissionRequired states
   - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2_
 
-- [ ] 2. Implement UsageStatsRepository for data access
+- [x] 2. Implement UsageStatsRepository for data access
+
+
+
+
   - Create repository interface with methods for getting usage stats and checking permissions
   - Implement concrete repository class using UsageStatsManager and PackageManager
   - Add method to calculate time ranges based on TimeFilter selection
