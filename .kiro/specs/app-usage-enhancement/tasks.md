@@ -52,7 +52,12 @@
   - Implement list update functionality with proper data handling
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 6. Implement sorting logic for app usage list
+- [x] 6. Implement sorting logic for app usage list
+
+
+
+
+
   - Add sorting by total usage time in descending order
   - Implement secondary sorting by last used time for apps with same usage
   - Handle zero usage apps placement at bottom of list

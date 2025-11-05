@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.crossevol.mobilemonitor.model.AppUsageInfo
 import me.crossevol.mobilemonitor.model.TimeFilter
+import me.crossevol.mobilemonitor.utils.AppUsageSorter
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -54,7 +55,7 @@ class UsageStatsRepositoryImpl(
                 
                 val aggregatedStats = aggregateUsageStats(usageStats)
                 val appUsageInfoList = buildAppUsageInfoList(aggregatedStats)
-                val sortedList = sortAppsByUsage(appUsageInfoList)
+                val sortedList = AppUsageSorter.sortByUsage(appUsageInfoList)
                 
                 Result.success(sortedList)
             } catch (e: SecurityException) {
@@ -141,10 +142,10 @@ class UsageStatsRepositoryImpl(
     
     /**
      * Aggregates usage statistics by package name, summing up total usage times
+     * Includes apps with zero usage to ensure proper sorting behavior
      */
     private fun aggregateUsageStats(usageStats: List<UsageStats>): Map<String, AggregatedUsageData> {
         return usageStats
-            .filter { it.totalTimeInForeground > 0 } // Filter out apps with no usage
             .groupBy { it.packageName }
             .mapValues { (_, stats) ->
                 AggregatedUsageData(
@@ -193,15 +194,7 @@ class UsageStatsRepositoryImpl(
         }
     }
     
-    /**
-     * Sorts apps by total usage time (descending), then by last used time (descending)
-     */
-    private fun sortAppsByUsage(apps: List<AppUsageInfo>): List<AppUsageInfo> {
-        return apps.sortedWith(
-            compareByDescending<AppUsageInfo> { it.totalTimeInForeground }
-                .thenByDescending { it.lastTimeUsed }
-        )
-    }
+
     
     /**
      * Checks if an app is a system app

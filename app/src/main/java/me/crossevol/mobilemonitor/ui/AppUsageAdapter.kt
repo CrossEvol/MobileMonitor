@@ -4,6 +4,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import me.crossevol.mobilemonitor.model.AppUsageInfo
+import me.crossevol.mobilemonitor.utils.AppUsageSorter
 
 /**
  * RecyclerView adapter for displaying a list of app usage information.
@@ -44,14 +45,18 @@ class AppUsageAdapter : RecyclerView.Adapter<AppUsageViewHolder>() {
     /**
      * Updates the list of apps with efficient diff calculation.
      * Uses DiffUtil to calculate the minimal set of changes needed to update the list.
+     * Ensures consistent sorting by applying the standard sorting logic.
      * 
      * @param newApps The new list of app usage information
      */
     fun updateApps(newApps: List<AppUsageInfo>) {
-        val diffCallback = AppUsageDiffCallback(apps, newApps)
+        // Ensure consistent sorting across all filter selections
+        val sortedNewApps = AppUsageSorter.sortByUsage(newApps)
+        
+        val diffCallback = AppUsageDiffCallback(apps, sortedNewApps)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
         
-        apps = newApps
+        apps = sortedNewApps
         diffResult.dispatchUpdatesTo(this)
     }
     
