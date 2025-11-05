@@ -1,7 +1,9 @@
 package me.crossevol.mobilemonitor.ui
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -49,7 +51,7 @@ class TimeFilterDropdownTest {
     @Test
     fun timeFilterDropdown_showsAllOptionsWhenExpanded() {
         // Given
-        var selectedFilter = TimeFilter.DAILY
+        var selectedFilter = TimeFilter.WEEKLY // Use WEEKLY to avoid confusion with DAILY appearing twice
         
         // When
         composeTestRule.setContent {
@@ -61,16 +63,61 @@ class TimeFilterDropdownTest {
             }
         }
         
+        // Expand the dropdown by clicking the button
+        composeTestRule
+            .onNodeWithText(selectedFilter.displayName, useUnmergedTree = true)
+            .performClick()
+
+        // Then - all filter options should be visible in the dropdown menu
+        // Check that we have the expected number of nodes for each filter
+        TimeFilter.entries.forEach { filter ->
+            val nodes = composeTestRule.onAllNodesWithText(filter.displayName)
+            
+            if (filter == selectedFilter) {
+                // Selected filter appears twice: in button and in menu
+                nodes.assertCountEquals(2)
+            } else {
+                // Other filters appear once: only in menu
+                nodes.assertCountEquals(1)
+            }
+            
+            // Verify at least one instance is displayed
+            nodes[0].assertIsDisplayed()
+        }
+    }
+    
+    @Test
+    fun timeFilterDropdown_selectsNewFilter() {
+        // Given
+        var selectedFilter = TimeFilter.DAILY
+        var callbackInvoked = false
+        
+        // When
+        composeTestRule.setContent {
+            MobileMonitorTheme {
+                TimeFilterDropdown(
+                    selectedFilter = selectedFilter,
+                    onFilterChanged = { newFilter ->
+                        selectedFilter = newFilter
+                        callbackInvoked = true
+                    }
+                )
+            }
+        }
+        
         // Expand the dropdown
         composeTestRule
-            .onNodeWithText(selectedFilter.displayName)
+            .onNodeWithText(selectedFilter.displayName, useUnmergedTree = true)
             .performClick()
         
-        // Then - all filter options should be visible
-        TimeFilter.values().forEach { filter ->
-            composeTestRule
-                .onNodeWithText(filter.displayName)
-                .assertIsDisplayed()
-        }
+        // Select a different filter (MONTHLY)
+        val targetFilter = TimeFilter.MONTHLY
+        composeTestRule
+            .onAllNodesWithText(targetFilter.displayName)[0]
+            .performClick()
+        
+        // Then - callback should be invoked and filter should change
+        assert(callbackInvoked) { "Filter change callback was not invoked" }
+        assert(selectedFilter == targetFilter) { "Selected filter was not updated" }
     }
 }

@@ -43,8 +43,9 @@ class UsageStatsRepositoryImpl(
                 }
                 
                 val (startTime, endTime) = calculateTimeRange(timeFilter)
+                val interval = getUsageStatsInterval(timeFilter)
                 val usageStats = usageStatsManager.queryUsageStats(
-                    UsageStatsManager.INTERVAL_DAILY, // TODO: 这里为什么使用  INTERVAL_DAILY, 而不是 switch-case 来选择呢?
+                    interval,
                     startTime,
                     endTime
                 )
@@ -53,8 +54,15 @@ class UsageStatsRepositoryImpl(
                     return@withContext Result.success(emptyList())
                 }
                 
+                // Debug: Log the number of raw usage stats
+                android.util.Log.d("UsageStats", "Found ${usageStats.size} raw usage stats entries")
+                
                 val aggregatedStats = aggregateUsageStats(usageStats)
+                android.util.Log.d("UsageStats", "Aggregated ${aggregatedStats.size} unique apps")
+                
                 val appUsageInfoList = buildAppUsageInfoList(aggregatedStats)
+                android.util.Log.d("UsageStats", "Built ${appUsageInfoList.size} app usage info entries")
+                
                 val sortedList = AppUsageSorter.sortByUsage(appUsageInfoList)
                 
                 Result.success(sortedList)
@@ -106,37 +114,49 @@ class UsageStatsRepositoryImpl(
         val calendar = Calendar.getInstance()
         val endTime = calendar.timeInMillis
         
+        // Create a new calendar instance for start time calculation
+        val startCalendar = Calendar.getInstance()
+        
         when (timeFilter) {
             TimeFilter.DAILY -> {
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
+                // Get data from start of today
+                startCalendar.set(Calendar.HOUR_OF_DAY, 0)
+                startCalendar.set(Calendar.MINUTE, 0)
+                startCalendar.set(Calendar.SECOND, 0)
+                startCalendar.set(Calendar.MILLISECOND, 0)
             }
             TimeFilter.WEEKLY -> {
-                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
+                // Get data from start of this week
+                startCalendar.set(Calendar.DAY_OF_WEEK, startCalendar.firstDayOfWeek)
+                startCalendar.set(Calendar.HOUR_OF_DAY, 0)
+                startCalendar.set(Calendar.MINUTE, 0)
+                startCalendar.set(Calendar.SECOND, 0)
+                startCalendar.set(Calendar.MILLISECOND, 0)
             }
             TimeFilter.MONTHLY -> {
-                calendar.set(Calendar.DAY_OF_MONTH, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
+                // Get data from start of this month
+                startCalendar.set(Calendar.DAY_OF_MONTH, 1)
+                startCalendar.set(Calendar.HOUR_OF_DAY, 0)
+                startCalendar.set(Calendar.MINUTE, 0)
+                startCalendar.set(Calendar.SECOND, 0)
+                startCalendar.set(Calendar.MILLISECOND, 0)
             }
             TimeFilter.YEARLY -> {
-                calendar.set(Calendar.DAY_OF_YEAR, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
+                // Get data from start of this year
+                startCalendar.set(Calendar.DAY_OF_YEAR, 1)
+                startCalendar.set(Calendar.HOUR_OF_DAY, 0)
+                startCalendar.set(Calendar.MINUTE, 0)
+                startCalendar.set(Calendar.SECOND, 0)
+                startCalendar.set(Calendar.MILLISECOND, 0)
             }
         }
         
-        val startTime = calendar.timeInMillis
+        val startTime = startCalendar.timeInMillis
+        
+        // For debugging: ensure we're getting a reasonable time range
+        val timeDiff = endTime - startTime
+        val hours = TimeUnit.MILLISECONDS.toHours(timeDiff)
+        
         return Pair(startTime, endTime)
     }
     
@@ -165,8 +185,8 @@ class UsageStatsRepositoryImpl(
             try {
                 val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
                 
-                // Skip system apps that are not user-facing
-                if (isSystemApp(applicationInfo) && !isUserFacingSystemApp(applicationInfo)) {
+                // Skip apps that are clearly not user-facing (more lenient filtering)
+                if (shouldSkipApp(applicationInfo, usageData)) {
                     return@mapNotNull null
                 }
                 
@@ -197,6 +217,70 @@ class UsageStatsRepositoryImpl(
 
     
     /**
+     * Gets the appropriate usage stats interval based on the time filter
+     */
+    private fun getUsageStatsInterval(timeFilter: TimeFilter): Int {
+        return when (timeFilter) {
+            TimeFilter.DAILY -> UsageStatsManager.INTERVAL_DAILY
+            TimeFilter.WEEKLY -> UsageStatsManager.INTERVAL_WEEKLY
+            TimeFilter.MONTHLY -> UsageStatsManager.INTERVAL_MONTHLY
+            TimeFilter.YEARLY -> UsageStatsManager.INTERVAL_YEARLY
+        }
+    }
+    
+    /**
+     * Determines if an app should be skipped from the usage statistics
+     * Uses more lenient filtering to include user-installed apps
+     */
+    private fun shouldSkipApp(applicationInfo: ApplicationInfo, usageData: AggregatedUsageData): Boolean {
+        val packageName = applicationInfo.packageName
+        
+        // Always skip our own app
+        if (packageName == context.packageName) {
+            return true
+        }
+        
+        // Skip apps with no usage time and no recent usage
+        if (usageData.totalTimeInForeground <= 0 && usageData.lastTimeUsed <= 0) {
+            return true
+        }
+        
+        // Skip known system processes and services that users don't interact with
+        val systemPackagesToSkip = setOf(
+            "android",
+            "com.android.systemui",
+            "com.android.launcher",
+            "com.android.inputmethod",
+            "com.google.android.gms",
+            "com.google.android.gsf",
+            "com.android.vending", // Google Play Store background processes
+            "com.android.providers",
+            "com.android.server"
+        )
+        
+        // Skip if it's a known system package that users don't directly use
+        if (systemPackagesToSkip.any { packageName.startsWith(it) }) {
+            return true
+        }
+        
+        // Check if the app has a launcher intent (can be opened by user)
+        val hasLauncherIntent = try {
+            packageManager.getLaunchIntentForPackage(packageName) != null
+        } catch (e: Exception) {
+            false
+        }
+        
+        // If it's a system app without launcher intent, skip it
+        val isSystemApp = (applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+        if (isSystemApp && !hasLauncherIntent) {
+            return true
+        }
+        
+        // Include all other apps (user-installed apps and user-facing system apps)
+        return false
+    }
+    
+    /**
      * Checks if an app is a system app
      */
     private fun isSystemApp(applicationInfo: ApplicationInfo): Boolean {
@@ -204,17 +288,25 @@ class UsageStatsRepositoryImpl(
     }
     
     /**
-     * Checks if a system app is user-facing (like Settings, Phone, etc.)
+     * Debug method to get all apps with usage data (including filtered ones)
+     * This can help diagnose filtering issues
      */
-    private fun isUserFacingSystemApp(applicationInfo: ApplicationInfo): Boolean {
-        // Include system apps that have a launcher activity (user can open them)
-        return try {
-            val intent = packageManager.getLaunchIntentForPackage(applicationInfo.packageName)
-            intent != null
-        } catch (e: Exception) {
-            false
+    suspend fun getAllAppsWithUsageDebug(timeFilter: TimeFilter): List<String> = 
+        withContext(Dispatchers.IO) {
+            try {
+                if (!hasUsageStatsPermission()) {
+                    return@withContext emptyList()
+                }
+                
+                val (startTime, endTime) = calculateTimeRange(timeFilter)
+                val interval = getUsageStatsInterval(timeFilter)
+                val usageStats = usageStatsManager.queryUsageStats(interval, startTime, endTime)
+                
+                usageStats?.map { "${it.packageName} - ${it.totalTimeInForeground}ms" } ?: emptyList()
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
-    }
     
     /**
      * Data class to hold aggregated usage statistics
