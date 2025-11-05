@@ -41,7 +41,11 @@
   - Handle zero usage case display
   - _Requirements: 1.2, 1.3, 1.5_
 
-- [ ] 5. Create RecyclerView adapter and ViewHolder
+- [x] 5. Create RecyclerView adapter and ViewHolder
+
+
+
+
   - Implement AppUsageAdapter extending RecyclerView.Adapter
   - Create AppUsageViewHolder with proper view binding
   - Add data binding logic in ViewHolder to display app info, usage time, and last used time

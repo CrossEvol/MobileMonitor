@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">MobileMonitor</string>
+    <string name="app_icon_description">Application icon</string>
+    <string name="last_used_format">Last used: %s</string>
+    <string name="never_used">Never used</string>
 </resources>
