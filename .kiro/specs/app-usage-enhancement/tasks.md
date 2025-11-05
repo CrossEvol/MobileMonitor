@@ -64,7 +64,11 @@
   - Ensure consistent sorting across different filter selections
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 7. Create time filter UI component
+- [x] 7. Create time filter UI component
+
+
+
+
   - Implement dropdown or spinner for time filter selection
   - Add filter options: Daily, Weekly, Monthly, Yearly
   - Handle filter selection changes and update ViewModel
