@@ -233,51 +233,22 @@ class UsageStatsRepositoryImpl(
      * Uses more lenient filtering to include user-installed apps
      */
     private fun shouldSkipApp(applicationInfo: ApplicationInfo, usageData: AggregatedUsageData): Boolean {
-        val packageName = applicationInfo.packageName
-        
+        // Skip apps with no usage time
+        if (usageData.totalTimeInForeground <= 0) {
+            return true
+        }
+
         // Always skip our own app
-        if (packageName == context.packageName) {
+        if (applicationInfo.packageName == context.packageName) {
             return true
         }
-        
-        // Skip apps with no usage time and no recent usage
-        if (usageData.totalTimeInForeground <= 0 && usageData.lastTimeUsed <= 0) {
-            return true
-        }
-        
-        // Skip known system processes and services that users don't interact with
-        val systemPackagesToSkip = setOf(
-            "android",
-            "com.android.systemui",
-            "com.android.launcher",
-            "com.android.inputmethod",
-            "com.google.android.gms",
-            "com.google.android.gsf",
-            "com.android.vending", // Google Play Store background processes
-            "com.android.providers",
-            "com.android.server"
-        )
-        
-        // Skip if it's a known system package that users don't directly use
-        if (systemPackagesToSkip.any { packageName.startsWith(it) }) {
-            return true
-        }
-        
+
         // Check if the app has a launcher intent (can be opened by user)
-        val hasLauncherIntent = try {
-            packageManager.getLaunchIntentForPackage(packageName) != null
-        } catch (e: Exception) {
-            false
-        }
-        
-        // If it's a system app without launcher intent, skip it
-        val isSystemApp = (applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-        if (isSystemApp && !hasLauncherIntent) {
-            return true
-        }
-        
-        // Include all other apps (user-installed apps and user-facing system apps)
-        return false
+        val hasLauncherIntent = packageManager.getLaunchIntentForPackage(applicationInfo.packageName) != null
+
+        // Keep apps that have a launcher intent.
+        // This is a good proxy for "user-facing" apps.
+        return !hasLauncherIntent
     }
     
     /**
