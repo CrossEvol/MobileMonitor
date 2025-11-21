@@ -32,26 +32,28 @@ the testcases need to boostrap the true or emulated device only need write code,
   - **Property 4: Rule evaluation checks all factors**
   - **Validates: Requirements 2.7**
 
-- [ ] 3. Create rule pattern expansion logic
+- [x] 3. Create rule pattern expansion logic
+testcases marked by @Test should return Unit not the result of runBlocking, just wrap it
+skip the testcases need device or emulator.
   - Implement workday pattern expansion (Monday-Friday)
   - Implement weekend pattern expansion (Saturday-Sunday)
   - Implement custom pattern expansion for selected days
   - Add validation to allow multiple rules per day
   - _Requirements: 3.5, 3.6, 3.7, 3.8_
 
-- [ ] 3.1 Write property test for workday pattern
+- [x] 3.1 Write property test for workday pattern
   - **Property 6: Workday pattern creates five rules**
   - **Validates: Requirements 3.5**
 
-- [ ] 3.2 Write property test for weekend pattern
+- [x] 3.2 Write property test for weekend pattern
   - **Property 7: Weekend pattern creates two rules**
   - **Validates: Requirements 3.6**
 
-- [ ] 3.3 Write property test for custom pattern
+- [x] 3.3 Write property test for custom pattern
   - **Property 8: Custom pattern creates rules for selected days**
   - **Validates: Requirements 3.7**
 
-- [ ] 3.4 Write property test for multiple rules per day
+- [x] 3.4 Write property test for multiple rules per day
   - **Property 9: Multiple rules per day are allowed**
   - **Validates: Requirements 3.8**
 
