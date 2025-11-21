@@ -88,7 +88,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 7. Set up navigation with Jetpack Navigation Compose
+- [x] 7. Set up navigation with Jetpack Navigation Compose
   - Add Navigation Compose dependency
   - Create Screen sealed class with all routes
   - Implement NavHost with all screen destinations
