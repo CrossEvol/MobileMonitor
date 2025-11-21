@@ -153,7 +153,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 12. Implement settings screen
+- [x] 12. Implement settings screen
   - Create SettingsScreen composable
   - Create SettingsViewModel with StateFlow for settings state
   - Add global monitoring toggle

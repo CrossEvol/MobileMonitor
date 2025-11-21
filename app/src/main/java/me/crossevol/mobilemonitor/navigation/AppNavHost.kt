@@ -159,10 +159,15 @@ fun AppNavHost(
         
         // Settings screen - global app configuration
         composable(route = Screen.Settings.route) {
-            // TODO: Implement SettingsScreen composable
-            // SettingsScreen(
-            //     onNavigateBack = { navController.popBackStack() }
-            // )
+            val context = LocalContext.current
+            val viewModel: me.crossevol.mobilemonitor.viewmodel.SettingsViewModel = viewModel(
+                factory = me.crossevol.mobilemonitor.viewmodel.SettingsViewModelFactory(context)
+            )
+            
+            me.crossevol.mobilemonitor.ui.SettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         
         // Blocking screen - shown when app usage is restricted
