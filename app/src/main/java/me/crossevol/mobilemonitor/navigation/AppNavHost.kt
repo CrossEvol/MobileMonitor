@@ -12,7 +12,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import me.crossevol.mobilemonitor.data.database.AppRestrictionDatabase
 import me.crossevol.mobilemonitor.repository.AppRestrictionRepositoryImpl
+import me.crossevol.mobilemonitor.ui.AppDetailScreen
 import me.crossevol.mobilemonitor.ui.HomeScreen
+import me.crossevol.mobilemonitor.viewmodel.AppDetailViewModel
+import me.crossevol.mobilemonitor.viewmodel.AppDetailViewModelFactory
 import me.crossevol.mobilemonitor.viewmodel.HomeViewModel
 import me.crossevol.mobilemonitor.viewmodel.HomeViewModelFactory
 
@@ -69,17 +72,27 @@ fun AppNavHost(
             )
         ) { backStackEntry ->
             val appId = backStackEntry.arguments?.getLong("appId") ?: 0L
-            // TODO: Implement AppDetailScreen composable
-            // AppDetailScreen(
-            //     appId = appId,
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onNavigateToAddRule = { appId ->
-            //         navController.navigate(Screen.AddRule.createRoute(appId))
-            //     },
-            //     onNavigateToEditRule = { ruleId ->
-            //         navController.navigate(Screen.EditRule.createRoute(ruleId))
-            //     }
-            // )
+            val context = LocalContext.current
+            val database = AppRestrictionDatabase.getDatabase(context)
+            val repository = AppRestrictionRepositoryImpl(
+                appInfoDao = database.appInfoDao(),
+                appRuleDao = database.appRuleDao(),
+                context = context
+            )
+            val viewModel: AppDetailViewModel = viewModel(
+                factory = AppDetailViewModelFactory(appId, repository)
+            )
+            
+            AppDetailScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAddRule = { appId ->
+                    navController.navigate(Screen.AddRule.createRoute(appId))
+                },
+                onNavigateToEditRule = { ruleId ->
+                    navController.navigate(Screen.EditRule.createRoute(ruleId))
+                }
+            )
         }
         
         // Add rule screen - create new usage rules

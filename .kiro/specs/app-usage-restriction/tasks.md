@@ -111,7 +111,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 9. Implement app detail screen
+- [x] 9. Implement app detail screen
   - Create AppDetailScreen composable
   - Create AppDetailViewModel with StateFlow for UI state
   - Display app information header
