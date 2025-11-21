@@ -126,7 +126,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 10. Implement add rule screen
+- [x] 10. Implement add rule screen
   - Create AddRuleScreen composable
   - Create AddRuleViewModel with StateFlow for form state
   - Add day pattern selector (Workday/Weekend/Custom)

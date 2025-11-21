@@ -12,8 +12,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import me.crossevol.mobilemonitor.data.database.AppRestrictionDatabase
 import me.crossevol.mobilemonitor.repository.AppRestrictionRepositoryImpl
+import me.crossevol.mobilemonitor.ui.AddRuleScreen
 import me.crossevol.mobilemonitor.ui.AppDetailScreen
 import me.crossevol.mobilemonitor.ui.HomeScreen
+import me.crossevol.mobilemonitor.viewmodel.AddRuleViewModel
+import me.crossevol.mobilemonitor.viewmodel.AddRuleViewModelFactory
 import me.crossevol.mobilemonitor.viewmodel.AppDetailViewModel
 import me.crossevol.mobilemonitor.viewmodel.AppDetailViewModelFactory
 import me.crossevol.mobilemonitor.viewmodel.HomeViewModel
@@ -105,12 +108,22 @@ fun AppNavHost(
             )
         ) { backStackEntry ->
             val appId = backStackEntry.arguments?.getLong("appId") ?: 0L
-            // TODO: Implement AddRuleScreen composable
-            // AddRuleScreen(
-            //     appId = appId,
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onRuleSaved = { navController.popBackStack() }
-            // )
+            val context = LocalContext.current
+            val database = AppRestrictionDatabase.getDatabase(context)
+            val repository = AppRestrictionRepositoryImpl(
+                appInfoDao = database.appInfoDao(),
+                appRuleDao = database.appRuleDao(),
+                context = context
+            )
+            val viewModel: AddRuleViewModel = viewModel(
+                factory = AddRuleViewModelFactory(appId, repository)
+            )
+            
+            AddRuleScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onRuleSaved = { navController.popBackStack() }
+            )
         }
         
         // Edit rule screen - modify existing rules
