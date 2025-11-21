@@ -1,17 +1,17 @@
 # Implementation Plan
 
-- [ ] 1. Set up database layer with Room
+- [x] 1. Set up database layer with Room
   - Create AppInfoEntity and AppRuleEntity data classes with proper annotations
   - Implement AppInfoDao and AppRuleDao interfaces with all required queries
   - Create AppRestrictionDatabase class with Room configuration
   - Set up database migration strategy
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 1.1 Write property test for database persistence round-trip
+- [x] 1.1 Write property test for database persistence round-trip
   - **Property 10: Database persistence round-trip**
   - **Validates: Requirements 4.2, 4.4, 4.6**
 
-- [ ] 1.2 Write property test for referential integrity
+- [x] 1.2 Write property test for referential integrity
   - **Property 11: Referential integrity is maintained**
   - **Validates: Requirements 4.5**
 
