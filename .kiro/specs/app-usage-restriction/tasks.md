@@ -34,7 +34,7 @@ the testcases need to boostrap the true or emulated device only need write code,
 
 - [x] 3. Create rule pattern expansion logic
 testcases marked by @Test should return Unit not the result of runBlocking, just wrap it
-skip the testcases need device or emulator.
+skip the test for  testcases need device or emulator, just provide the code.
   - Implement workday pattern expansion (Monday-Friday)
   - Implement weekend pattern expansion (Saturday-Sunday)
   - Implement custom pattern expansion for selected days
@@ -70,7 +70,9 @@ skip the testcases need device or emulator.
 
 
 
-- [ ] 5. Create usage tracking system
+- [x] 5. Create usage tracking system
+testcases marked by @Test should return Unit not the result of runBlocking, just wrap it
+skip the test for  testcases need device or emulator, just provide the code.
   - Implement UsageTracker class to monitor app usage time and count
   - Integrate with UsageStatsManager for historical data
   - Add time range matching logic (handle midnight crossing)

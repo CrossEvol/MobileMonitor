@@ -12,6 +12,7 @@ import me.crossevol.mobilemonitor.model.AppInfo
 import me.crossevol.mobilemonitor.model.AppRule
 import me.crossevol.mobilemonitor.model.DayOfWeek
 import me.crossevol.mobilemonitor.model.RestrictionResult
+import me.crossevol.mobilemonitor.utils.UsageTracker
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -26,6 +27,7 @@ class AppRestrictionRepositoryImpl(
 ) : AppRestrictionRepository {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    private val usageTracker = UsageTracker(context)
 
     // Entity to Domain mapping
     private fun AppInfoEntity.toDomain(): AppInfo {
@@ -210,10 +212,12 @@ class AppRestrictionRepositoryImpl(
                 continue
             }
             
-            // TODO: Get actual usage stats from UsageStatsManager
-            // For now, we'll use placeholder values
-            val currentUsageTime = 0 // minutes
-            val currentUsageCount = 0
+            // Get actual usage stats from UsageStatsManager
+            val (currentUsageTime, currentUsageCount) = usageTracker.getUsageInMinutes(
+                packageName,
+                rule.timeRangeStart,
+                rule.timeRangeEnd
+            )
             
             // Check if usage exceeds limits
             val timeExceeded = rule.totalTime > 0 && currentUsageTime >= rule.totalTime
