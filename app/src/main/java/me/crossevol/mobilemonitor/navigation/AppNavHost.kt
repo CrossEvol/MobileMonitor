@@ -1,12 +1,20 @@
 package me.crossevol.mobilemonitor.navigation
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import me.crossevol.mobilemonitor.data.database.AppRestrictionDatabase
+import me.crossevol.mobilemonitor.repository.AppRestrictionRepositoryImpl
+import me.crossevol.mobilemonitor.ui.HomeScreen
+import me.crossevol.mobilemonitor.viewmodel.HomeViewModel
+import me.crossevol.mobilemonitor.viewmodel.HomeViewModelFactory
 
 /**
  * Main navigation host for the app.
@@ -29,15 +37,26 @@ fun AppNavHost(
     ) {
         // Home screen - displays list of monitored apps
         composable(route = Screen.Home.route) {
-            // TODO: Implement HomeScreen composable
-            // HomeScreen(
-            //     onNavigateToAppDetail = { appId ->
-            //         navController.navigate(Screen.AppDetail.createRoute(appId))
-            //     },
-            //     onNavigateToSettings = {
-            //         navController.navigate(Screen.Settings.route)
-            //     }
-            // )
+            val context = LocalContext.current
+            val database = AppRestrictionDatabase.getDatabase(context)
+            val repository = AppRestrictionRepositoryImpl(
+                appInfoDao = database.appInfoDao(),
+                appRuleDao = database.appRuleDao(),
+                context = context
+            )
+            val viewModel: HomeViewModel = viewModel(
+                factory = HomeViewModelFactory(repository)
+            )
+            
+            HomeScreen(
+                viewModel = viewModel,
+                onNavigateToAppDetail = { appId ->
+                    navController.navigate(Screen.AppDetail.createRoute(appId))
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
+                }
+            )
         }
         
         // App detail screen - shows app information and rules

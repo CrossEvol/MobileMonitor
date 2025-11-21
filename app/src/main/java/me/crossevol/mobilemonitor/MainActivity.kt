@@ -52,13 +52,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MobileMonitorTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    UsageStatsScreen(
-                        viewModel = viewModel,
-                        onOpenSettings = { openUsageAccessSettings() },
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                // Use the new navigation-based app structure
+                me.crossevol.mobilemonitor.navigation.AppNavigationContainer()
             }
         }
     }

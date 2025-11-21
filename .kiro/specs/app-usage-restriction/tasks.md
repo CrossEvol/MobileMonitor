@@ -98,7 +98,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 8. Implement home screen
+- [x] 8. Implement home screen
   - Create HomeScreen composable
   - Create HomeViewModel with StateFlow for UI state
   - Load all apps from repository
