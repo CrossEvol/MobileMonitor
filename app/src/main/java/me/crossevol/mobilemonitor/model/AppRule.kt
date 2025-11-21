@@ -1,5 +1,7 @@
 package me.crossevol.mobilemonitor.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.time.LocalTime
 
 /**
@@ -14,6 +16,7 @@ import java.time.LocalTime
  * @param appInfoId Associated app identifier
  * @param createdTime Timestamp when rule was created
  */
+@Parcelize
 data class AppRule(
     val id: Long = 0,
     val day: DayOfWeek,
@@ -23,4 +26,4 @@ data class AppRule(
     val totalCount: Int,
     val appInfoId: Long,
     val createdTime: Long = System.currentTimeMillis()
-)
+) : Parcelable

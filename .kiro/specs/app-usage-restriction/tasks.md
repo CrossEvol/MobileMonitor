@@ -79,7 +79,7 @@ skip the test for  testcases need device or emulator, just provide the code.
   - Implement current usage calculation for restriction checking
   - _Requirements: 1.2, 2.7_
 
-- [ ] 6. Implement blocking screen
+- [x] 6. Implement blocking screen
   - Create BlockingActivity with Compose UI
   - Display app name, time period, access count, and duration
   - Add close button to return to home

@@ -38,6 +38,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Blocking screen shown when app access is restricted -->
+        <activity
+            android:name=".ui.BlockingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MobileMonitor"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
+
         <!-- Accessibility service for monitoring app launches -->
         <service
             android:name=".service.AppMonitoringService"
