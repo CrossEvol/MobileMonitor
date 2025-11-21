@@ -38,37 +38,44 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-import me.crossevol.mobilemonitor.model.AppInfo
+import me.crossevol.mobilemonitor.model.AppUsageInfo
+import me.crossevol.mobilemonitor.model.UsageStatsState
 import me.crossevol.mobilemonitor.ui.theme.MobileMonitorTheme
 import me.crossevol.mobilemonitor.viewmodel.HomeViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import me.crossevol.mobilemonitor.viewmodel.UsageStatsViewModel
 
 /**
- * Home screen displaying list of monitored apps
+ * Home screen displaying list of monitored apps with usage statistics
  * 
- * @param viewModel ViewModel managing the home screen state
+ * Integrates UsageStatsViewModel for loading app usage data and HomeViewModel
+ * for managing monitored apps from the database.
+ * 
+ * @param usageStatsViewModel ViewModel for loading usage statistics
+ * @param homeViewModel ViewModel for managing monitored apps
  * @param onNavigateToAppDetail Callback when user taps an app
  * @param onNavigateToSettings Callback when user taps settings icon
+ * @param onOpenPermissionSettings Callback to open usage access settings
  * @param modifier Optional modifier for the screen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel,
-    onNavigateToAppDetail: (Long) -> Unit,
+    usageStatsViewModel: UsageStatsViewModel,
+    homeViewModel: HomeViewModel,
+    onNavigateToAppDetail: (String) -> Unit, // Changed to packageName
     onNavigateToSettings: () -> Unit,
+    onOpenPermissionSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val usageStatsState by usageStatsViewModel.uiState.collectAsState()
+    val homeUiState by homeViewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Monitored Apps",
+                        text = "App Usage Monitor",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -94,24 +101,36 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
-                uiState.isLoading -> {
+            // Use existing state handling from UsageStatsViewModel
+            when (usageStatsState) {
+                is UsageStatsState.Loading -> {
                     LoadingScreen()
                 }
-                uiState.error != null -> {
+                is UsageStatsState.PermissionRequired -> {
+                    PermissionRequestScreen(
+                        onOpenSettings = onOpenPermissionSettings,
+                        onRetry = { usageStatsViewModel.checkPermissions() }
+                    )
+                }
+                is UsageStatsState.Error -> {
                     ErrorScreen(
-                        errorMessage = uiState.error ?: "Unknown error",
-                        onRetry = { viewModel.retry() }
+                        errorMessage = (usageStatsState as UsageStatsState.Error).message,
+                        onRetry = { usageStatsViewModel.retry() }
                     )
                 }
-                uiState.apps.isEmpty() -> {
-                    EmptyAppsScreen()
-                }
-                else -> {
-                    AppsList(
-                        apps = uiState.apps,
-                        onAppClick = onNavigateToAppDetail
-                    )
+                is UsageStatsState.Success -> {
+                    val apps = (usageStatsState as UsageStatsState.Success).apps
+                    val monitoredPackages = homeUiState.apps.map { it.packageName }.toSet()
+                    
+                    if (apps.isEmpty()) {
+                        EmptyAppsScreen()
+                    } else {
+                        AppUsageList(
+                            apps = apps,
+                            monitoredPackages = monitoredPackages,
+                            onAppClick = onNavigateToAppDetail
+                        )
+                    }
                 }
             }
         }
@@ -120,11 +139,13 @@ fun HomeScreen(
 
 /**
  * List of apps displayed in a LazyColumn
+ * Uses AppUsageInfo from UsageStatsViewModel
  */
 @Composable
-private fun AppsList(
-    apps: List<AppInfo>,
-    onAppClick: (Long) -> Unit,
+private fun AppUsageList(
+    apps: List<AppUsageInfo>,
+    monitoredPackages: Set<String>,
+    onAppClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -137,10 +158,11 @@ private fun AppsList(
             Spacer(modifier = Modifier.height(8.dp))
         }
         
-        items(apps, key = { it.id }) { app ->
-            AppListItem(
+        items(apps, key = { it.packageName }) { app ->
+            AppUsageListItem(
                 app = app,
-                onClick = { onAppClick(app.id) }
+                isMonitored = monitoredPackages.contains(app.packageName),
+                onClick = { onAppClick(app.packageName) }
             )
         }
         
@@ -151,11 +173,12 @@ private fun AppsList(
 }
 
 /**
- * Individual app list item card
+ * Individual app list item card showing usage information
  */
 @Composable
-private fun AppListItem(
-    app: AppInfo,
+private fun AppUsageListItem(
+    app: AppUsageInfo,
+    isMonitored: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -165,7 +188,11 @@ private fun AppListItem(
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isMonitored) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
         )
     ) {
         Row(
@@ -204,13 +231,28 @@ private fun AppListItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = app.appName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = app.appName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    
+                    // Show indicator if app is monitored
+                    if (isMonitored) {
+                        Text(
+                            text = "●",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
@@ -252,7 +294,7 @@ private fun AppListItem(
 }
 
 /**
- * Empty state screen when no apps are being monitored
+ * Empty state screen when no usage data is available
  */
 @Composable
 private fun EmptyAppsScreen(
@@ -266,7 +308,7 @@ private fun EmptyAppsScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "No Apps Monitored",
+            text = "No Usage Data Available",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -275,7 +317,7 @@ private fun EmptyAppsScreen(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "You haven't added any apps to monitor yet. Apps you add will appear here.",
+            text = "Try using some apps and check back later. Tap any app to add monitoring rules.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant

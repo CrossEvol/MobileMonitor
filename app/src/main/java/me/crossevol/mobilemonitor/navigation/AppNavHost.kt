@@ -44,26 +44,41 @@ fun AppNavHost(
         startDestination = startDestination,
         modifier = modifier
     ) {
-        // Home screen - displays list of monitored apps
+        // Home screen - displays list of monitored apps with usage statistics
         composable(route = Screen.Home.route) {
             val context = LocalContext.current
+            
+            // Set up AppRestrictionRepository for monitored apps
             val database = AppRestrictionDatabase.getDatabase(context)
-            val repository = AppRestrictionRepositoryImpl(
+            val restrictionRepository = AppRestrictionRepositoryImpl(
                 appInfoDao = database.appInfoDao(),
                 appRuleDao = database.appRuleDao(),
                 context = context
             )
-            val viewModel: HomeViewModel = viewModel(
-                factory = HomeViewModelFactory(repository)
+            val homeViewModel: HomeViewModel = viewModel(
+                factory = HomeViewModelFactory(restrictionRepository)
+            )
+            
+            // Set up UsageStatsRepository for usage statistics
+            val usageStatsRepository = me.crossevol.mobilemonitor.repository.UsageStatsRepositoryImpl(context)
+            val usageStatsViewModel: me.crossevol.mobilemonitor.viewmodel.UsageStatsViewModel = viewModel(
+                factory = me.crossevol.mobilemonitor.viewmodel.UsageStatsViewModelFactory(usageStatsRepository)
             )
             
             HomeScreen(
-                viewModel = viewModel,
-                onNavigateToAppDetail = { appId ->
-                    navController.navigate(Screen.AppDetail.createRoute(appId))
+                usageStatsViewModel = usageStatsViewModel,
+                homeViewModel = homeViewModel,
+                onNavigateToAppDetail = { packageName ->
+                    // Navigate to app detail, creating new app entry if needed
+                    navController.navigate(Screen.AppDetail.createRoute(packageName))
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onOpenPermissionSettings = {
+                    // Open usage access settings
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                    context.startActivity(intent)
                 }
             )
         }
@@ -72,12 +87,12 @@ fun AppNavHost(
         composable(
             route = Screen.AppDetail.route,
             arguments = listOf(
-                navArgument("appId") {
-                    type = NavType.LongType
+                navArgument("packageName") {
+                    type = NavType.StringType
                 }
             )
         ) { backStackEntry ->
-            val appId = backStackEntry.arguments?.getLong("appId") ?: 0L
+            val packageName = backStackEntry.arguments?.getString("packageName") ?: ""
             val context = LocalContext.current
             val database = AppRestrictionDatabase.getDatabase(context)
             val repository = AppRestrictionRepositoryImpl(
@@ -85,8 +100,10 @@ fun AppNavHost(
                 appRuleDao = database.appRuleDao(),
                 context = context
             )
+            
+            // Get or create app by package name
             val viewModel: AppDetailViewModel = viewModel(
-                factory = AppDetailViewModelFactory(appId, repository)
+                factory = AppDetailViewModelFactory(packageName, repository)
             )
             
             AppDetailScreen(

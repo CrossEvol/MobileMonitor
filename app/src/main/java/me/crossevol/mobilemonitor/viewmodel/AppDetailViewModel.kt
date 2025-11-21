@@ -35,16 +35,18 @@ data class AppDetailUiState(
  * ViewModel for the app detail screen
  * Manages app information, rules list, and user interactions
  * 
- * @param appId The ID of the app to display
+ * @param packageName The package name of the app to display (will create if not exists)
  * @param repository Repository for app restriction operations
  */
 class AppDetailViewModel(
-    private val appId: Long,
+    private val packageName: String,
     private val repository: AppRestrictionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppDetailUiState(isLoading = true))
     val uiState: StateFlow<AppDetailUiState> = _uiState.asStateFlow()
+    
+    private var currentAppId: Long = 0
 
     init {
         loadAppDetails()
@@ -52,25 +54,47 @@ class AppDetailViewModel(
 
     /**
      * Load app information and rules from the repository
+     * Creates a new app entry if it doesn't exist
      */
     private fun loadAppDetails() {
         viewModelScope.launch {
             _uiState.value = AppDetailUiState(isLoading = true)
             
             try {
-                // Load app info
-                val app = repository.getAppById(appId)
+                // Try to load existing app by package name
+                var app = repository.getAppByPackageName(packageName)
+                
+                // If app doesn't exist, create it using repository's getAppInfo
+                if (app == null) {
+                    // Repository should handle getting app info from system
+                    val appInfo = repository.getAppByPackageName(packageName)
+                    
+                    if (appInfo != null) {
+                        currentAppId = appInfo.id
+                        app = appInfo
+                    } else {
+                        // Create a basic app entry - repository will fill in details
+                        val newApp = AppInfo(
+                            appName = packageName, // Will be updated by repository
+                            packageName = packageName
+                        )
+                        currentAppId = repository.saveApp(newApp)
+                        app = repository.getAppById(currentAppId)
+                    }
+                } else {
+                    currentAppId = app.id
+                }
                 
                 if (app == null) {
                     _uiState.value = AppDetailUiState(
                         isLoading = false,
-                        error = "App not found"
+                        error = "Failed to load app"
                     )
                     return@launch
                 }
                 
                 // Combine app info with rules flow
-                repository.getRulesForApp(appId)
+                repository.getRulesForApp(currentAppId)
                     .catch { exception ->
                         _uiState.value = AppDetailUiState(
                             app = app,
@@ -103,7 +127,7 @@ class AppDetailViewModel(
     fun toggleAppEnabled(enabled: Boolean) {
         viewModelScope.launch {
             try {
-                repository.updateAppEnabled(appId, enabled)
+                repository.updateAppEnabled(currentAppId, enabled)
                 // Update local state
                 _uiState.value = _uiState.value.copy(
                     app = _uiState.value.app?.copy(enabled = enabled)

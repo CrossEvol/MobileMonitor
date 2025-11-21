@@ -12,9 +12,11 @@ sealed class Screen(val route: String) {
     
     /**
      * App detail screen showing app information and rules
-     * Route includes appId parameter
+     * Route includes packageName parameter
      */
-    object AppDetail : Screen("app_detail/{appId}") {
+    object AppDetail : Screen("app_detail/{packageName}") {
+        fun createRoute(packageName: String) = "app_detail/$packageName"
+        // Legacy support for appId
         fun createRoute(appId: Long) = "app_detail/$appId"
     }
     
