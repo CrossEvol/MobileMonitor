@@ -141,7 +141,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 11. Implement edit rule screen
+- [x] 11. Implement edit rule screen
   - Create EditRuleScreen composable
   - Create EditRuleViewModel with StateFlow for form state
   - Load existing rule data from database

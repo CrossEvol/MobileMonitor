@@ -14,11 +14,14 @@ import me.crossevol.mobilemonitor.data.database.AppRestrictionDatabase
 import me.crossevol.mobilemonitor.repository.AppRestrictionRepositoryImpl
 import me.crossevol.mobilemonitor.ui.AddRuleScreen
 import me.crossevol.mobilemonitor.ui.AppDetailScreen
+import me.crossevol.mobilemonitor.ui.EditRuleScreen
 import me.crossevol.mobilemonitor.ui.HomeScreen
 import me.crossevol.mobilemonitor.viewmodel.AddRuleViewModel
 import me.crossevol.mobilemonitor.viewmodel.AddRuleViewModelFactory
 import me.crossevol.mobilemonitor.viewmodel.AppDetailViewModel
 import me.crossevol.mobilemonitor.viewmodel.AppDetailViewModelFactory
+import me.crossevol.mobilemonitor.viewmodel.EditRuleViewModel
+import me.crossevol.mobilemonitor.viewmodel.EditRuleViewModelFactory
 import me.crossevol.mobilemonitor.viewmodel.HomeViewModel
 import me.crossevol.mobilemonitor.viewmodel.HomeViewModelFactory
 
@@ -136,12 +139,22 @@ fun AppNavHost(
             )
         ) { backStackEntry ->
             val ruleId = backStackEntry.arguments?.getLong("ruleId") ?: 0L
-            // TODO: Implement EditRuleScreen composable
-            // EditRuleScreen(
-            //     ruleId = ruleId,
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onRuleSaved = { navController.popBackStack() }
-            // )
+            val context = LocalContext.current
+            val database = AppRestrictionDatabase.getDatabase(context)
+            val repository = AppRestrictionRepositoryImpl(
+                appInfoDao = database.appInfoDao(),
+                appRuleDao = database.appRuleDao(),
+                context = context
+            )
+            val viewModel: EditRuleViewModel = viewModel(
+                factory = EditRuleViewModelFactory(ruleId, repository)
+            )
+            
+            EditRuleScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onRuleSaved = { navController.popBackStack() }
+            )
         }
         
         // Settings screen - global app configuration
