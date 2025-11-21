@@ -15,7 +15,8 @@
   - **Property 11: Referential integrity is maintained**
   - **Validates: Requirements 4.5**
 
-- [ ] 2. Implement domain models and repository layer
+- [x] 2. Implement domain models and repository layer
+the testcases need to boostrap the true or emulated device only need write code, do not run.
   - Create AppInfo, AppRule, DayOfWeek, DayPattern, and RestrictionResult domain models
   - Implement AppRestrictionRepository interface
   - Create AppRestrictionRepositoryImpl with entity-to-domain mapping
@@ -23,11 +24,11 @@
   - Add checkRestriction method with rule evaluation logic
   - _Requirements: 2.7, 3.1, 4.2, 4.4_
 
-- [ ] 2.1 Write property test for required field validation
+- [x] 2.1 Write property test for required field validation
   - **Property 5: Required fields are validated**
   - **Validates: Requirements 3.1**
 
-- [ ] 2.2 Write property test for rule evaluation
+- [x] 2.2 Write property test for rule evaluation
   - **Property 4: Rule evaluation checks all factors**
   - **Validates: Requirements 2.7**
 
