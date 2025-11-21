@@ -86,72 +86,76 @@ class ReferentialIntegrityPropertyTest {
     }
     
     @Test
-    fun propertyTest_DeletingAppCascadesToDeleteAllRules() = runBlocking {
-        checkAll(100, appInfoArb()) { appInfo ->
-            // Insert app
-            val appId = appInfoDao.insertApp(appInfo)
-            
-            // Generate and insert rules for this app
-            checkAll(1, appRulesArb(appId)) { rules ->
-                val insertedRuleIds = mutableListOf<Long>()
-                for (rule in rules) {
-                    val ruleId = appRuleDao.insertRule(rule)
-                    insertedRuleIds.add(ruleId)
+    fun propertyTest_DeletingAppCascadesToDeleteAllRules(){
+        runBlocking {
+            checkAll(100, appInfoArb()) { appInfo ->
+                // Insert app
+                val appId = appInfoDao.insertApp(appInfo)
+
+                // Generate and insert rules for this app
+                checkAll(1, appRulesArb(appId)) { rules ->
+                    val insertedRuleIds = mutableListOf<Long>()
+                    for (rule in rules) {
+                        val ruleId = appRuleDao.insertRule(rule)
+                        insertedRuleIds.add(ruleId)
+                    }
+
+                    // Delete the app
+                    val app = appInfoDao.getAppById(appId)
+                    if (app != null) {
+                        appInfoDao.deleteApp(app)
+                    }
+
+                    // Verify all rules are deleted (cascade delete)
+                    for (ruleId in insertedRuleIds) {
+                        val retrievedRule = appRuleDao.getRuleById(ruleId)
+                        assertNull("Rule $ruleId should be deleted when app is deleted", retrievedRule)
+                    }
+
+                    // Verify app is deleted
+                    val retrievedApp = appInfoDao.getAppById(appId)
+                    assertNull("App should be deleted", retrievedApp)
                 }
-                
-                // Delete the app
-                val app = appInfoDao.getAppById(appId)
-                if (app != null) {
-                    appInfoDao.deleteApp(app)
-                }
-                
-                // Verify all rules are deleted (cascade delete)
-                for (ruleId in insertedRuleIds) {
-                    val retrievedRule = appRuleDao.getRuleById(ruleId)
-                    assertNull("Rule $ruleId should be deleted when app is deleted", retrievedRule)
-                }
-                
-                // Verify app is deleted
-                val retrievedApp = appInfoDao.getAppById(appId)
-                assertNull("App should be deleted", retrievedApp)
             }
         }
     }
     
     @Test
-    fun propertyTest_NoOrphanedRulesExistAfterAppDeletion() = runBlocking {
-        checkAll(50, appInfoArb()) { appInfo ->
-            // Insert app
-            val appId = appInfoDao.insertApp(appInfo)
-            
-            // Generate and insert multiple rules
-            checkAll(1, appRulesArb(appId)) { rules ->
-                val insertedRuleIds = mutableListOf<Long>()
-                for (rule in rules) {
-                    val ruleId = appRuleDao.insertRule(rule)
-                    insertedRuleIds.add(ruleId)
-                }
-                
-                // Delete the app
-                val app = appInfoDao.getAppById(appId)
-                if (app != null) {
-                    appInfoDao.deleteApp(app)
-                }
-                
-                // Verify no rules remain for this app
-                var orphanedRuleCount = 0
-                for (ruleId in insertedRuleIds) {
-                    val rule = appRuleDao.getRuleById(ruleId)
-                    if (rule != null) {
-                        orphanedRuleCount++
+    fun propertyTest_NoOrphanedRulesExistAfterAppDeletion() {
+        runBlocking {
+            checkAll(50, appInfoArb()) { appInfo ->
+                // Insert app
+                val appId = appInfoDao.insertApp(appInfo)
+
+                // Generate and insert multiple rules
+                checkAll(1, appRulesArb(appId)) { rules ->
+                    val insertedRuleIds = mutableListOf<Long>()
+                    for (rule in rules) {
+                        val ruleId = appRuleDao.insertRule(rule)
+                        insertedRuleIds.add(ruleId)
                     }
+
+                    // Delete the app
+                    val app = appInfoDao.getAppById(appId)
+                    if (app != null) {
+                        appInfoDao.deleteApp(app)
+                    }
+
+                    // Verify no rules remain for this app
+                    var orphanedRuleCount = 0
+                    for (ruleId in insertedRuleIds) {
+                        val rule = appRuleDao.getRuleById(ruleId)
+                        if (rule != null) {
+                            orphanedRuleCount++
+                        }
+                    }
+
+                    assertEquals(
+                        "No orphaned rules should exist after app deletion",
+                        0,
+                        orphanedRuleCount
+                    )
                 }
-                
-                assertEquals(
-                    "No orphaned rules should exist after app deletion",
-                    0,
-                    orphanedRuleCount
-                )
             }
         }
     }
