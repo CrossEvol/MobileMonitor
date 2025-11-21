@@ -57,7 +57,7 @@ skip the testcases need device or emulator.
   - **Property 9: Multiple rules per day are allowed**
   - **Validates: Requirements 3.8**
 
-- [ ] 4. Implement monitoring service
+- [x] 4. Implement monitoring service
   - Create AppMonitoringService extending AccessibilityService
   - Implement onServiceConnected to initialize service
   - Implement onAccessibilityEvent to detect app launches

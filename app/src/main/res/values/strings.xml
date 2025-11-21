@@ -3,4 +3,5 @@
     <string name="app_icon_description">Application icon</string>
     <string name="last_used_format">Last used: %s</string>
     <string name="never_used">Never used</string>
+    <string name="accessibility_service_description">Monitors app launches to enforce usage restrictions. This service detects when you open apps and checks if any usage rules apply.</string>
 </resources>
