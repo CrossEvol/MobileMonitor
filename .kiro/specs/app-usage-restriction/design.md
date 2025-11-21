@@ -335,11 +335,15 @@ sealed class Screen(val route: String) {
 
 #### Screen Components
 
-**HomeScreen**: Displays list of monitored apps
+**HomeScreen**: Displays list of monitored apps with usage statistics
+- Integrates existing UsageStatsViewModel for loading app usage data
+- Combines HomeViewModel (for monitored apps from database) with UsageStatsViewModel (for usage statistics)
+- Reuses existing LoadingScreen, ErrorScreen, and PermissionRequestScreen components
 - Uses LazyColumn for app list
-- Shows app icon, name, package name, usage stats
+- Shows app icon, name, package name, usage stats from UsageStatsManager
 - Navigates to AppDetailScreen on item click
 - Settings icon in top app bar
+- Handles permission requests using existing permission flow
 
 **AppDetailScreen**: Shows app details and rules
 - App information header
@@ -405,8 +409,11 @@ CREATE INDEX idx_app_rule_app_info_id ON app_rule(app_info_id);
 
 ```kotlin
 // Home Screen State
+// Note: HomeScreen integrates with existing UsageStatsViewModel
+// which provides UsageStatsState (Loading, Success, Error, PermissionRequired)
+// HomeViewModel manages the list of monitored apps from the database
 data class HomeUiState(
-    val apps: List<AppInfo> = emptyList(),
+    val monitoredApps: List<AppInfo> = emptyList(), // Apps from Rule Database
     val isLoading: Boolean = false,
     val error: String? = null
 )

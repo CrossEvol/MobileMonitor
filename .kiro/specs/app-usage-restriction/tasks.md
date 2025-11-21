@@ -99,15 +99,17 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 - [x] 8. Implement home screen
-  - Create HomeScreen composable
-  - Create HomeViewModel with StateFlow for UI state
-  - Load all apps from repository
-  - Display app list with LazyColumn
-  - Show app icon, package name, app name, usage stats
+  - Integrate existing UsageStatsViewModel to load app usage statistics
+  - Create HomeViewModel to manage monitored apps from Rule Database
+  - Update HomeScreen composable to use both ViewModels
+  - Reuse existing LoadingScreen, ErrorScreen, and PermissionRequestScreen components
+  - Display app list with LazyColumn combining usage stats and monitored apps
+  - Show app icon, package name, app name, usage stats from UsageStatsManager
   - Add settings icon in top app bar
   - Handle navigation to app detail screen
   - Handle navigation to settings screen
-  - _Requirements: 5.1, 5.2, 5.3, 11.1, 11.2_
+  - Handle permission requests using existing permission flow
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 11.1, 11.2_
 
 
 
@@ -173,15 +175,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 14. Add dependency injection with Hilt
-  - Add Hilt dependencies to build.gradle
-  - Create Application class with @HiltAndroidApp
-  - Create database module providing Room database
-  - Create repository module providing repository instances
-  - Annotate ViewModels with @HiltViewModel
-  - Update MainActivity to use Hilt
-
-- [ ] 15. Implement error handling
+- [ ] 14. Implement error handling
   - Add try-catch blocks for database operations
   - Implement retry logic for service crashes with WorkManager
   - Add permission check UI for accessibility service
@@ -189,7 +183,7 @@ skip the test for  testcases need device or emulator, just provide the code.
   - Add inline validation error messages in forms
   - Implement loading states in all ViewModels
 
-- [ ] 16. Add permissions and manifest configuration
+- [ ] 15. Add permissions and manifest configuration
   - Add PACKAGE_USAGE_STATS permission to manifest
   - Add BIND_ACCESSIBILITY_SERVICE permission to manifest
   - Add FOREGROUND_SERVICE permission to manifest
@@ -197,5 +191,5 @@ skip the test for  testcases need device or emulator, just provide the code.
   - Register BlockingActivity in manifest
   - Create accessibility service configuration XML
 
-- [ ] 17. Checkpoint - Ensure all tests pass
+- [ ] 16. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.

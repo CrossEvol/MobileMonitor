@@ -78,9 +78,11 @@ This feature enables users to monitor and restrict their usage of specific appli
 
 #### Acceptance Criteria
 
-1. WHEN the home screen loads THEN the App Usage Monitor SHALL display a list of all Target Apps from the Rule Database
-2. WHEN displaying each Target App THEN the App Usage Monitor SHALL show app icon, package name, app name, total usage duration, and last opened time
-3. WHEN a user taps a Target App list item THEN the App Usage Monitor SHALL navigate to the app detail screen
+1. WHEN the home screen loads THEN the App Usage Monitor SHALL use the existing UsageStatsViewModel to load app usage statistics from the system
+2. WHEN the home screen loads THEN the App Usage Monitor SHALL display a list combining apps from the Rule Database with their usage statistics
+3. WHEN displaying each Target App THEN the App Usage Monitor SHALL show app icon, package name, app name, total usage duration, and last opened time
+4. WHEN a user taps a Target App list item THEN the App Usage Monitor SHALL navigate to the app detail screen
+5. WHEN the home screen displays THEN the App Usage Monitor SHALL reuse existing UI components for loading, error, and permission states
 
 ### Requirement 6
 
