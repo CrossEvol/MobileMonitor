@@ -1,7 +1,9 @@
 package me.crossevol.mobilemonitor.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +26,13 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class AppMonitoringService : AccessibilityService() {
     
+    companion object {
+        private const val PREFS_NAME = "app_monitoring_prefs"
+        private const val KEY_MONITORING_ENABLED = "monitoring_enabled"
+    }
+    
     private lateinit var repository: AppRestrictionRepository
+    private lateinit var sharedPreferences: SharedPreferences
     
     /**
      * Cache of rules indexed by package name for fast lookup
@@ -43,6 +51,9 @@ class AppMonitoringService : AccessibilityService() {
      */
     override fun onServiceConnected() {
         super.onServiceConnected()
+        
+        // Initialize SharedPreferences for global monitoring setting
+        sharedPreferences = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         
         // Initialize database and repository
         val database = AppRestrictionDatabase.getDatabase(applicationContext)
@@ -98,6 +109,15 @@ class AppMonitoringService : AccessibilityService() {
      */
     private suspend fun checkAndEnforceRestrictions(packageName: String) {
         try {
+            // Check if global monitoring is enabled
+            val monitoringEnabled = isMonitoringEnabled()
+            
+            // If monitoring is disabled, skip all rule enforcement (Requirement 11.7)
+            if (!monitoringEnabled) {
+                return
+            }
+            
+            // If monitoring is enabled, enforce all active rules (Requirement 11.8)
             // Check if app is restricted using repository
             val result = repository.checkRestriction(packageName)
             
@@ -108,6 +128,15 @@ class AppMonitoringService : AccessibilityService() {
             // Log error but don't crash the service
             e.printStackTrace()
         }
+    }
+    
+    /**
+     * Checks if global monitoring is enabled
+     * 
+     * @return true if monitoring is enabled, false otherwise
+     */
+    private fun isMonitoringEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_MONITORING_ENABLED, true)
     }
     
     /**

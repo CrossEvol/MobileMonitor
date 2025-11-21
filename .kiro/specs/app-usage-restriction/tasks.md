@@ -165,7 +165,7 @@ skip the test for  testcases need device or emulator, just provide the code.
 
 
 
-- [ ] 13. Implement global monitoring enforcement
+- [x] 13. Implement global monitoring enforcement
   - Add monitoring enabled check in service
   - Skip all rule enforcement when monitoring is disabled
   - Enforce all active rules when monitoring is enabled
