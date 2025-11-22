@@ -47,20 +47,27 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.value = HomeUiState(isLoading = true)
             
-            repository.getAllApps()
-                .catch { exception ->
-                    _uiState.value = HomeUiState(
-                        isLoading = false,
-                        error = exception.message ?: "Failed to load apps"
-                    )
-                }
-                .collect { apps ->
-                    _uiState.value = HomeUiState(
-                        apps = apps,
-                        isLoading = false,
-                        error = null
-                    )
-                }
+            try {
+                repository.getAllApps()
+                    .catch { exception ->
+                        _uiState.value = HomeUiState(
+                            isLoading = false,
+                            error = "Failed to load apps: ${exception.message ?: "Unknown error"}"
+                        )
+                    }
+                    .collect { apps ->
+                        _uiState.value = HomeUiState(
+                            apps = apps,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+            } catch (e: Exception) {
+                _uiState.value = HomeUiState(
+                    isLoading = false,
+                    error = "Failed to load apps: ${e.message ?: "Unknown error"}"
+                )
+            }
         }
     }
 
@@ -69,5 +76,12 @@ class HomeViewModel(
      */
     fun retry() {
         loadApps()
+    }
+    
+    /**
+     * Clear error state
+     */
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
     }
 }

@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.view.accessibility.AccessibilityEvent
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +19,7 @@ import me.crossevol.mobilemonitor.model.RestrictionResult
 import me.crossevol.mobilemonitor.repository.AppRestrictionRepository
 import me.crossevol.mobilemonitor.repository.AppRestrictionRepositoryImpl
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /**
  * Accessibility service that monitors app launches and enforces usage restrictions
@@ -209,11 +213,35 @@ class AppMonitoringService : AccessibilityService() {
     
     /**
      * Called when the service is destroyed
-     * Cleans up resources
+     * Cleans up resources and schedules restart worker
      */
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
         rulesCache.clear()
+        
+        // Schedule worker to check if service needs to be restarted
+        scheduleServiceRestartWorker()
+    }
+    
+    /**
+     * Schedule a WorkManager task to check and restart the service if needed
+     */
+    private fun scheduleServiceRestartWorker() {
+        try {
+            val workRequest = OneTimeWorkRequestBuilder<ServiceRestartWorker>()
+                .setInitialDelay(5, TimeUnit.SECONDS)
+                .build()
+            
+            WorkManager.getInstance(applicationContext)
+                .enqueueUniqueWork(
+                    ServiceRestartWorker.WORK_NAME,
+                    ExistingWorkPolicy.REPLACE,
+                    workRequest
+                )
+        } catch (e: Exception) {
+            // Log error but don't crash
+            e.printStackTrace()
+        }
     }
 }

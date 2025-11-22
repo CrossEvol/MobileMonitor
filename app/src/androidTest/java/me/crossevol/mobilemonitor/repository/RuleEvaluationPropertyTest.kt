@@ -151,7 +151,7 @@ class RuleEvaluationPropertyTest {
             
             // Create rules for different days
             checkAll(1, appRuleArb(appId)) { rule ->
-                repository.saveRule(rule)
+                val ruleId = repository.saveRule(rule)
                 
                 // Check restriction
                 val result = repository.checkRestriction(enabledApp.packageName)
@@ -170,7 +170,7 @@ class RuleEvaluationPropertyTest {
                 }
                 
                 // Clean up rule
-                repository.deleteRule(rule.id)
+                repository.deleteRule(ruleId)
             }
             
             // Clean up app
@@ -229,7 +229,7 @@ class RuleEvaluationPropertyTest {
             val appId = repository.saveApp(appInfo)
             
             checkAll(1, appRuleArb(appId)) { rule ->
-                repository.saveRule(rule)
+                val ruleId = repository.saveRule(rule)
                 
                 // Check restriction
                 val result = repository.checkRestriction(appInfo.packageName)
@@ -248,7 +248,7 @@ class RuleEvaluationPropertyTest {
                 }
                 
                 // Clean up
-                repository.deleteRule(rule.id)
+                repository.deleteRule(ruleId)
             }
             
             repository.deleteApp(appId)

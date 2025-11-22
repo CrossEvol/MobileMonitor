@@ -188,4 +188,11 @@ class AppDetailViewModel(
     fun retry() {
         loadAppDetails()
     }
+    
+    /**
+     * Clear error state
+     */
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
 }

@@ -18,6 +18,16 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
 /**
+ * Custom exception for database operation failures
+ */
+class DatabaseException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+/**
+ * Custom exception for validation failures
+ */
+class ValidationException(message: String) : Exception(message)
+
+/**
  * Implementation of AppRestrictionRepository
  */
 class AppRestrictionRepositoryImpl(
@@ -95,28 +105,53 @@ class AppRestrictionRepositoryImpl(
     }
 
     override suspend fun getAppById(appId: Long): AppInfo? {
-        return appInfoDao.getAppById(appId)?.toDomain()
+        return try {
+            appInfoDao.getAppById(appId)?.toDomain()
+        } catch (e: Exception) {
+            // Log error and rethrow with more context
+            throw DatabaseException("Failed to get app by ID: $appId", e)
+        }
     }
 
     override suspend fun getAppByPackageName(packageName: String): AppInfo? {
-        return appInfoDao.getAppByPackageName(packageName)?.toDomain()
+        return try {
+            appInfoDao.getAppByPackageName(packageName)?.toDomain()
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to get app by package name: $packageName", e)
+        }
     }
 
     override suspend fun saveApp(app: AppInfo): Long {
-        return appInfoDao.insertApp(app.toEntity())
+        return try {
+            appInfoDao.insertApp(app.toEntity())
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to save app: ${app.appName}", e)
+        }
     }
 
     override suspend fun updateAppEnabled(appId: Long, enabled: Boolean) {
-        val app = appInfoDao.getAppById(appId)
-        app?.let {
-            appInfoDao.updateApp(it.copy(enabled = enabled))
+        try {
+            val app = appInfoDao.getAppById(appId)
+            app?.let {
+                appInfoDao.updateApp(it.copy(enabled = enabled))
+            } ?: throw DatabaseException("App not found with ID: $appId")
+        } catch (e: DatabaseException) {
+            throw e
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to update app enabled status", e)
         }
     }
 
     override suspend fun deleteApp(appId: Long) {
-        val app = appInfoDao.getAppById(appId)
-        app?.let {
-            appInfoDao.deleteApp(it)
+        try {
+            val app = appInfoDao.getAppById(appId)
+            app?.let {
+                appInfoDao.deleteApp(it)
+            } ?: throw DatabaseException("App not found with ID: $appId")
+        } catch (e: DatabaseException) {
+            throw e
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to delete app", e)
         }
     }
 
@@ -128,34 +163,81 @@ class AppRestrictionRepositoryImpl(
     }
 
     override suspend fun getRuleById(ruleId: Long): AppRule? {
-        return appRuleDao.getRuleById(ruleId)?.toDomain()
+        return try {
+            appRuleDao.getRuleById(ruleId)?.toDomain()
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to get rule by ID: $ruleId", e)
+        }
     }
 
     override suspend fun getAllEnabledRules(): List<AppRule> {
-        return appRuleDao.getAllEnabledRules().map { it.toDomain() }
+        return try {
+            appRuleDao.getAllEnabledRules().map { it.toDomain() }
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to get enabled rules", e)
+        }
     }
 
     override suspend fun saveRule(rule: AppRule): Long {
-        return appRuleDao.insertRule(rule.toEntity())
+        return try {
+            appRuleDao.insertRule(rule.toEntity())
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to save rule", e)
+        }
     }
 
     override suspend fun saveRules(rules: List<AppRule>) {
-        appRuleDao.insertRules(rules.map { it.toEntity() })
+        try {
+            if (rules.isEmpty()) {
+                throw ValidationException("Cannot save empty rule list")
+            }
+            appRuleDao.insertRules(rules.map { it.toEntity() })
+        } catch (e: ValidationException) {
+            throw e
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to save rules", e)
+        }
     }
 
     override suspend fun updateRule(rule: AppRule) {
-        appRuleDao.updateRule(rule.toEntity())
+        try {
+            appRuleDao.updateRule(rule.toEntity())
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to update rule", e)
+        }
     }
 
     override suspend fun deleteRule(ruleId: Long) {
-        val rule = appRuleDao.getRuleById(ruleId)
-        rule?.let {
-            appRuleDao.deleteRule(it)
+        try {
+            val rule = appRuleDao.getRuleById(ruleId)
+            rule?.let {
+                appRuleDao.deleteRule(it)
+            } ?: throw DatabaseException("Rule not found with ID: $ruleId")
+        } catch (e: DatabaseException) {
+            throw e
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to delete rule", e)
         }
     }
 
     // Monitoring operations
     override suspend fun checkRestriction(packageName: String): RestrictionResult {
+        return try {
+            checkRestrictionInternal(packageName)
+        } catch (e: Exception) {
+            // Log error but return non-restricted result to prevent blocking user
+            // This ensures service doesn't crash on errors
+            RestrictionResult(
+                isRestricted = false,
+                appName = packageName,
+                violatedRule = null,
+                currentUsageTime = 0,
+                currentUsageCount = 0
+            )
+        }
+    }
+    
+    private suspend fun checkRestrictionInternal(packageName: String): RestrictionResult {
         // Get app info
         val app = getAppByPackageName(packageName)
         

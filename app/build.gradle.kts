@@ -76,10 +76,14 @@ dependencies {
     // Room dependencies
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.work.runtime.ktx)
     ksp(libs.androidx.room.compiler)
     
     // Navigation Compose
     implementation(libs.androidx.navigation.compose)
+    
+    // WorkManager for background tasks
+    implementation(libs.androidx.work.runtime.ktx)
     
     testImplementation(libs.junit)
     testImplementation(libs.androidx.room.testing)

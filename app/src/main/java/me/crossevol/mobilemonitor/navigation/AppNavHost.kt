@@ -92,7 +92,17 @@ fun AppNavHost(
                 }
             )
         ) { backStackEntry ->
-            val packageName = backStackEntry.arguments?.getString("packageName") ?: ""
+            val packageName = backStackEntry.arguments?.getString("packageName")
+            
+            // Handle missing or invalid package name
+            if (packageName.isNullOrBlank()) {
+                // Navigate back to home on error
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    navController.popBackStack(Screen.Home.route, inclusive = false)
+                }
+                return@composable
+            }
+            
             val context = LocalContext.current
             val database = AppRestrictionDatabase.getDatabase(context)
             val repository = AppRestrictionRepositoryImpl(
@@ -108,12 +118,31 @@ fun AppNavHost(
             
             AppDetailScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { 
+                    try {
+                        navController.popBackStack()
+                    } catch (e: Exception) {
+                        // Handle navigation failure gracefully
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
+                },
                 onNavigateToAddRule = { appId ->
-                    navController.navigate(Screen.AddRule.createRoute(appId))
+                    try {
+                        navController.navigate(Screen.AddRule.createRoute(appId))
+                    } catch (e: Exception) {
+                        // Log error but don't crash
+                        e.printStackTrace()
+                    }
                 },
                 onNavigateToEditRule = { ruleId ->
-                    navController.navigate(Screen.EditRule.createRoute(ruleId))
+                    try {
+                        navController.navigate(Screen.EditRule.createRoute(ruleId))
+                    } catch (e: Exception) {
+                        // Log error but don't crash
+                        e.printStackTrace()
+                    }
                 }
             )
         }
@@ -128,6 +157,15 @@ fun AppNavHost(
             )
         ) { backStackEntry ->
             val appId = backStackEntry.arguments?.getLong("appId") ?: 0L
+            
+            // Handle invalid app ID
+            if (appId == 0L) {
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+                return@composable
+            }
+            
             val context = LocalContext.current
             val database = AppRestrictionDatabase.getDatabase(context)
             val repository = AppRestrictionRepositoryImpl(
@@ -141,8 +179,20 @@ fun AppNavHost(
             
             AddRuleScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onRuleSaved = { navController.popBackStack() }
+                onNavigateBack = { 
+                    try {
+                        navController.popBackStack()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                },
+                onRuleSaved = { 
+                    try {
+                        navController.popBackStack()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             )
         }
         
@@ -156,6 +206,15 @@ fun AppNavHost(
             )
         ) { backStackEntry ->
             val ruleId = backStackEntry.arguments?.getLong("ruleId") ?: 0L
+            
+            // Handle invalid rule ID
+            if (ruleId == 0L) {
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+                return@composable
+            }
+            
             val context = LocalContext.current
             val database = AppRestrictionDatabase.getDatabase(context)
             val repository = AppRestrictionRepositoryImpl(
@@ -169,8 +228,20 @@ fun AppNavHost(
             
             EditRuleScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onRuleSaved = { navController.popBackStack() }
+                onNavigateBack = { 
+                    try {
+                        navController.popBackStack()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                },
+                onRuleSaved = { 
+                    try {
+                        navController.popBackStack()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             )
         }
         

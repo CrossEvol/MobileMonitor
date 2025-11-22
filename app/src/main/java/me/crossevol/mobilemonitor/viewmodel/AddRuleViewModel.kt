@@ -140,10 +140,18 @@ class AddRuleViewModel(
         // Validate time range (end time should be after start time)
         val isTimeRangeValid = state.timeRangeEnd.isAfter(state.timeRangeStart)
         
-        val isValid = isDayPatternValid && isTimeRangeValid
+        // Validate that at least one restriction is set
+        val hasRestriction = state.totalTime > 0 || state.totalCount > 0
+        
+        // Validate that values are non-negative
+        val areValuesValid = state.totalTime >= 0 && state.totalCount >= 0
+        
+        val isValid = isDayPatternValid && isTimeRangeValid && hasRestriction && areValuesValid
         val errorMessage = when {
             !isDayPatternValid -> "Please select at least one day for custom pattern"
             !isTimeRangeValid -> "End time must be after start time"
+            !areValuesValid -> "Time and count must be non-negative"
+            !hasRestriction -> "Please set at least one restriction (time or count)"
             else -> null
         }
         
@@ -159,6 +167,9 @@ class AddRuleViewModel(
      */
     fun saveRule() {
         if (!_formState.value.isValid) {
+            _formState.value = _formState.value.copy(
+                errorMessage = "Please fix validation errors before saving"
+            )
             return
         }
         
@@ -179,6 +190,10 @@ class AddRuleViewModel(
                     appInfoId = appId
                 )
                 
+                if (rules.isEmpty()) {
+                    throw IllegalStateException("No rules were generated from the pattern")
+                }
+                
                 // Save all rules to database
                 repository.saveRules(rules)
                 
@@ -189,10 +204,15 @@ class AddRuleViewModel(
                     isSaving = false,
                     saveSuccess = true
                 )
+            } catch (e: IllegalStateException) {
+                _formState.value = _formState.value.copy(
+                    isSaving = false,
+                    errorMessage = e.message ?: "Invalid rule configuration"
+                )
             } catch (e: Exception) {
                 _formState.value = _formState.value.copy(
                     isSaving = false,
-                    errorMessage = e.message ?: "Failed to save rule"
+                    errorMessage = "Failed to save rule: ${e.message ?: "Unknown error"}"
                 )
             }
         }

@@ -161,7 +161,18 @@ class EditRuleViewModel(
      */
     fun saveRule() {
         val currentRule = _formState.value.rule
-        if (!_formState.value.isValid || currentRule == null) {
+        
+        if (!_formState.value.isValid) {
+            _formState.value = _formState.value.copy(
+                errorMessage = "Please fix validation errors before saving"
+            )
+            return
+        }
+        
+        if (currentRule == null) {
+            _formState.value = _formState.value.copy(
+                errorMessage = "Rule data not loaded"
+            )
             return
         }
         
@@ -170,6 +181,11 @@ class EditRuleViewModel(
                 _formState.value = _formState.value.copy(isSaving = true, errorMessage = null)
                 
                 val state = _formState.value
+                
+                // Validate that at least one restriction is set
+                if (state.totalTime == 0 && state.totalCount == 0) {
+                    throw IllegalStateException("At least one restriction (time or count) must be set")
+                }
                 
                 // Create updated rule with new values
                 val updatedRule = currentRule.copy(
@@ -189,10 +205,15 @@ class EditRuleViewModel(
                     isSaving = false,
                     saveSuccess = true
                 )
+            } catch (e: IllegalStateException) {
+                _formState.value = _formState.value.copy(
+                    isSaving = false,
+                    errorMessage = e.message ?: "Invalid rule configuration"
+                )
             } catch (e: Exception) {
                 _formState.value = _formState.value.copy(
                     isSaving = false,
-                    errorMessage = e.message ?: "Failed to save rule"
+                    errorMessage = "Failed to save rule: ${e.message ?: "Unknown error"}"
                 )
             }
         }
