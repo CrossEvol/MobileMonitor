@@ -183,7 +183,7 @@ skip the test for  testcases need device or emulator, just provide the code.
   - Add inline validation error messages in forms
   - Implement loading states in all ViewModels
 
-- [ ] 15. Add permissions and manifest configuration
+- [x] 15. Add permissions and manifest configuration
   - Add PACKAGE_USAGE_STATS permission to manifest
   - Add BIND_ACCESSIBILITY_SERVICE permission to manifest
   - Add FOREGROUND_SERVICE permission to manifest
@@ -191,5 +191,5 @@ skip the test for  testcases need device or emulator, just provide the code.
   - Register BlockingActivity in manifest
   - Create accessibility service configuration XML
 
-- [ ] 16. Checkpoint - Ensure all tests pass
+- [x] 16. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
