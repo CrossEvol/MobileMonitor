@@ -302,8 +302,8 @@ class AppRestrictionRepositoryImpl(
             )
             
             // Check if usage exceeds limits
-            val timeExceeded = rule.totalTime > 0 && currentUsageTime >= rule.totalTime
-            val countExceeded = rule.totalCount > 0 && currentUsageCount >= rule.totalCount
+            val timeExceeded = rule.totalTime in 0..currentUsageTime
+            val countExceeded = rule.totalCount in 0..currentUsageCount
             
             if (timeExceeded || countExceeded) {
                 return RestrictionResult(

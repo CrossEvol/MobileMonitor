@@ -182,11 +182,6 @@ class EditRuleViewModel(
                 
                 val state = _formState.value
                 
-                // Validate that at least one restriction is set
-                if (state.totalTime == 0 && state.totalCount == 0) {
-                    throw IllegalStateException("At least one restriction (time or count) must be set")
-                }
-                
                 // Create updated rule with new values
                 val updatedRule = currentRule.copy(
                     timeRangeStart = state.timeRangeStart,

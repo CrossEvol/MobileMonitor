@@ -14,7 +14,7 @@ import java.time.LocalTime
 
 /**
  * UI state for the add rule form
- * 
+ *
  * @param dayPattern Selected day pattern (WORKDAY, WEEKEND, or CUSTOM)
  * @param selectedDays Set of selected days (used for CUSTOM pattern)
  * @param timeRangeStart Start time of restriction period
@@ -29,8 +29,14 @@ import java.time.LocalTime
 data class RuleFormState(
     val dayPattern: DayPattern = DayPattern.WORKDAY,
     val selectedDays: Set<DayOfWeek> = emptySet(),
-    val timeRangeStart: LocalTime = LocalTime.of(9, 0),
-    val timeRangeEnd: LocalTime = LocalTime.of(17, 0),
+    val timeRangeStart: LocalTime = LocalTime.of(
+        9,
+        0
+    ),
+    val timeRangeEnd: LocalTime = LocalTime.of(
+        17,
+        0
+    ),
     val totalTime: Int = 0,
     val totalCount: Int = 0,
     val isValid: Boolean = true,
@@ -42,7 +48,7 @@ data class RuleFormState(
 /**
  * ViewModel for the add rule screen
  * Manages form state and handles rule creation with pattern expansion
- * 
+ *
  * @param appId The ID of the app to create rules for
  * @param repository Repository for app restriction operations
  */
@@ -56,7 +62,7 @@ class AddRuleViewModel(
 
     /**
      * Update the selected day pattern
-     * 
+     *
      * @param pattern New day pattern
      */
     fun updateDayPattern(pattern: DayPattern) {
@@ -70,7 +76,7 @@ class AddRuleViewModel(
 
     /**
      * Toggle a day in the custom day selection
-     * 
+     *
      * @param day Day to toggle
      */
     fun toggleDay(day: DayOfWeek) {
@@ -80,14 +86,14 @@ class AddRuleViewModel(
         } else {
             currentDays + day
         }
-        
+
         _formState.value = _formState.value.copy(selectedDays = newDays)
         validateForm()
     }
 
     /**
      * Update the start time of the restriction period
-     * 
+     *
      * @param time New start time
      */
     fun updateTimeRangeStart(time: LocalTime) {
@@ -97,7 +103,7 @@ class AddRuleViewModel(
 
     /**
      * Update the end time of the restriction period
-     * 
+     *
      * @param time New end time
      */
     fun updateTimeRangeEnd(time: LocalTime) {
@@ -107,7 +113,7 @@ class AddRuleViewModel(
 
     /**
      * Update the total time restriction
-     * 
+     *
      * @param time Total time in minutes
      */
     fun updateTotalTime(time: Int) {
@@ -117,7 +123,7 @@ class AddRuleViewModel(
 
     /**
      * Update the total count restriction
-     * 
+     *
      * @param count Total access count
      */
     fun updateTotalCount(count: Int) {
@@ -130,31 +136,27 @@ class AddRuleViewModel(
      */
     private fun validateForm() {
         val state = _formState.value
-        
+
         // Validate day pattern and selected days
         val isDayPatternValid = RulePatternExpander.validateRuleInput(
             pattern = state.dayPattern,
             selectedDays = state.selectedDays
         )
-        
+
         // Validate time range (end time should be after start time)
         val isTimeRangeValid = state.timeRangeEnd.isAfter(state.timeRangeStart)
-        
-        // Validate that at least one restriction is set
-        val hasRestriction = state.totalTime > 0 || state.totalCount > 0
-        
+
         // Validate that values are non-negative
         val areValuesValid = state.totalTime >= 0 && state.totalCount >= 0
-        
-        val isValid = isDayPatternValid && isTimeRangeValid && hasRestriction && areValuesValid
+
+        val isValid = isDayPatternValid && isTimeRangeValid && areValuesValid
         val errorMessage = when {
             !isDayPatternValid -> "Please select at least one day for custom pattern"
-            !isTimeRangeValid -> "End time must be after start time"
-            !areValuesValid -> "Time and count must be non-negative"
-            !hasRestriction -> "Please set at least one restriction (time or count)"
-            else -> null
+            !isTimeRangeValid  -> "End time must be after start time"
+            !areValuesValid    -> "Time and count must be non-negative"
+            else               -> null
         }
-        
+
         _formState.value = state.copy(
             isValid = isValid,
             errorMessage = errorMessage
@@ -172,13 +174,16 @@ class AddRuleViewModel(
             )
             return
         }
-        
+
         viewModelScope.launch {
             try {
-                _formState.value = _formState.value.copy(isSaving = true, errorMessage = null)
-                
+                _formState.value = _formState.value.copy(
+                    isSaving = true,
+                    errorMessage = null
+                )
+
                 val state = _formState.value
-                
+
                 // Expand pattern into individual rules
                 val rules = RulePatternExpander.expandPattern(
                     pattern = state.dayPattern,
@@ -189,17 +194,17 @@ class AddRuleViewModel(
                     totalCount = state.totalCount,
                     appInfoId = appId
                 )
-                
+
                 if (rules.isEmpty()) {
                     throw IllegalStateException("No rules were generated from the pattern")
                 }
-                
+
                 // Save all rules to database
                 repository.saveRules(rules)
-                
+
                 // Notify monitoring service to reload rules
                 // Note: Service notification will be handled by the repository implementation
-                
+
                 _formState.value = _formState.value.copy(
                     isSaving = false,
                     saveSuccess = true
