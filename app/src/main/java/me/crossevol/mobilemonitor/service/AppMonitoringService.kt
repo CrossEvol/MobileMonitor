@@ -1,5 +1,7 @@
 package me.crossevol.mobilemonitor.service
 
+import android.util.Log
+
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
@@ -31,6 +33,7 @@ import java.util.concurrent.TimeUnit
 class AppMonitoringService : AccessibilityService() {
     
     companion object {
+        private const val TAG = "AppMonitoringService"
         private const val PREFS_NAME = "app_monitoring_prefs"
         private const val KEY_MONITORING_ENABLED = "monitoring_enabled"
     }
@@ -55,6 +58,9 @@ class AppMonitoringService : AccessibilityService() {
      */
     override fun onServiceConnected() {
         super.onServiceConnected()
+        Log.d(TAG, "========================================")
+        Log.d(TAG, "Accessibility Service CONNECTED")
+        Log.d(TAG, "========================================")
         
         // Initialize SharedPreferences for global monitoring setting
         sharedPreferences = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -66,6 +72,8 @@ class AppMonitoringService : AccessibilityService() {
             appRuleDao = database.appRuleDao(),
             context = applicationContext
         )
+        
+        Log.d(TAG, "Repository initialized")
         
         // Load rules into cache
         serviceScope.launch {
@@ -80,16 +88,24 @@ class AppMonitoringService : AccessibilityService() {
      * @param event The accessibility event
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null) return
+        if (event == null) {
+            Log.v(TAG, "Received null event")
+            return
+        }
         
         // Only handle window state changes (app launches)
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString() ?: return
             
+            Log.d(TAG, "Window state changed: $packageName")
+            
             // Ignore our own package to prevent blocking ourselves
             if (packageName == this.packageName) {
+                Log.v(TAG, "Ignoring own package")
                 return
             }
+            
+            Log.i(TAG, "Checking restrictions for: $packageName")
             
             // Check and enforce restrictions in background
             serviceScope.launch {
@@ -103,6 +119,7 @@ class AppMonitoringService : AccessibilityService() {
      * Required by AccessibilityService but not used
      */
     override fun onInterrupt() {
+        Log.w(TAG, "Accessibility Service INTERRUPTED")
         // Service interrupted - no action needed
     }
     
@@ -115,21 +132,30 @@ class AppMonitoringService : AccessibilityService() {
         try {
             // Check if global monitoring is enabled
             val monitoringEnabled = isMonitoringEnabled()
+            Log.d(TAG, "Monitoring enabled: $monitoringEnabled")
             
             // If monitoring is disabled, skip all rule enforcement (Requirement 11.7)
             if (!monitoringEnabled) {
+                Log.i(TAG, "Monitoring is disabled - skipping restriction check")
                 return
             }
             
             // If monitoring is enabled, enforce all active rules (Requirement 11.8)
             // Check if app is restricted using repository
+            Log.d(TAG, "Checking restriction for: $packageName")
             val result = repository.checkRestriction(packageName)
             
+            Log.i(TAG, "Restriction result for $packageName: isRestricted=${result.isRestricted}")
+            
             if (result.isRestricted) {
+                Log.w(TAG, "APP IS RESTRICTED! Launching blocking screen for: ${result.appName}")
                 launchBlockingScreen(result)
+            } else {
+                Log.d(TAG, "App is not restricted: $packageName")
             }
         } catch (e: Exception) {
             // Log error but don't crash the service
+            Log.e(TAG, "Error checking restrictions for $packageName", e)
             e.printStackTrace()
         }
     }
@@ -149,28 +175,26 @@ class AppMonitoringService : AccessibilityService() {
      * @param result The restriction result containing violation details
      */
     private fun launchBlockingScreen(result: RestrictionResult) {
-        // TODO: Create BlockingActivity and update this intent
-        // For now, we'll create a placeholder intent with individual extras
-        val intent = Intent().apply {
-            // Will be updated to: Intent(this, BlockingActivity::class.java)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            putExtra("APP_NAME", result.appName)
-            putExtra("CURRENT_USAGE_TIME", result.currentUsageTime)
-            putExtra("CURRENT_USAGE_COUNT", result.currentUsageCount)
-            putExtra("IS_RESTRICTED", result.isRestricted)
-            // Rule details if available
-            result.violatedRule?.let { rule ->
-                putExtra("RULE_ID", rule.id)
-                putExtra("RULE_DAY", rule.day.value)
-                putExtra("RULE_TIME_START", rule.timeRangeStart.toString())
-                putExtra("RULE_TIME_END", rule.timeRangeEnd.toString())
-                putExtra("RULE_TOTAL_TIME", rule.totalTime)
-                putExtra("RULE_TOTAL_COUNT", rule.totalCount)
+        // Check if we have permission to show overlay windows (required for Android 10+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                // Cannot show blocking screen without permission
+                // Log this issue but don't crash the service
+                android.util.Log.w("AppMonitoringService", 
+                    "SYSTEM_ALERT_WINDOW permission not granted. Cannot block app: ${result.appName}")
+                return
             }
         }
         
-        // TODO: Uncomment when BlockingActivity is created
-        // startActivity(intent)
+        val intent = Intent(this, me.crossevol.mobilemonitor.ui.BlockingActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
+                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                     Intent.FLAG_ACTIVITY_NO_HISTORY or
+                     Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+            putExtra("RESTRICTION_RESULT", result)
+        }
+        
+        startActivity(intent)
     }
     
     /**
@@ -179,8 +203,11 @@ class AppMonitoringService : AccessibilityService() {
      */
     private suspend fun loadRulesIntoCache() {
         try {
+            Log.d(TAG, "Loading rules into cache...")
+            
             // Get all enabled rules from repository
             val rules = repository.getAllEnabledRules()
+            Log.d(TAG, "Found ${rules.size} enabled rules")
             
             // Clear existing cache
             rulesCache.clear()
@@ -193,10 +220,14 @@ class AppMonitoringService : AccessibilityService() {
                 val app = repository.getAppById(appId)
                 app?.let {
                     rulesCache[it.packageName] = appRules
+                    Log.d(TAG, "Cached ${appRules.size} rules for ${it.packageName}")
                 }
             }
+            
+            Log.i(TAG, "Rules cache loaded: ${rulesCache.size} apps with rules")
         } catch (e: Exception) {
             // Log error but don't crash the service
+            Log.e(TAG, "Error loading rules into cache", e)
             e.printStackTrace()
         }
     }
@@ -217,6 +248,10 @@ class AppMonitoringService : AccessibilityService() {
      */
     override fun onDestroy() {
         super.onDestroy()
+        Log.w(TAG, "========================================")
+        Log.w(TAG, "Accessibility Service DESTROYED")
+        Log.w(TAG, "========================================")
+        
         serviceScope.cancel()
         rulesCache.clear()
         
