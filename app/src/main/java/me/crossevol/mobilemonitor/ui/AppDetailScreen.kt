@@ -138,6 +138,8 @@ fun AppDetailScreen(
                     AppDetailContent(
                         app = uiState.app!!,
                         rules = uiState.rules,
+                        showDeleteDialog = uiState.showDeleteDialog,
+                        ruleToDelete = uiState.ruleToDelete,
                         onToggleEnabled = { enabled -> viewModel.toggleAppEnabled(enabled) },
                         onRuleClick = onNavigateToEditRule,
                         onRuleDelete = { rule -> viewModel.showDeleteDialog(rule) }
@@ -164,6 +166,8 @@ fun AppDetailScreen(
 private fun AppDetailContent(
     app: AppInfo,
     rules: List<AppRule>,
+    showDeleteDialog: Boolean,
+    ruleToDelete: AppRule?,
     onToggleEnabled: (Boolean) -> Unit,
     onRuleClick: (Long) -> Unit,
     onRuleDelete: (AppRule) -> Unit,
@@ -206,6 +210,8 @@ private fun AppDetailContent(
             items(rules, key = { it.id }) { rule ->
                 SwipeableRuleListItem(
                     rule = rule,
+                    showDeleteDialog = showDeleteDialog,
+                    isRuleToDelete = ruleToDelete?.id == rule.id,
                     onClick = { onRuleClick(rule.id) },
                     onDelete = { onRuleDelete(rule) }
                 )
@@ -217,6 +223,7 @@ private fun AppDetailContent(
         }
     }
 }
+
 
 /**
  * App information header with icon, name, and enable toggle
@@ -425,6 +432,8 @@ private fun EmptyRulesMessage(
 @Composable
 private fun SwipeableRuleListItem(
     rule: AppRule,
+    showDeleteDialog: Boolean,
+    isRuleToDelete: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -433,15 +442,26 @@ private fun SwipeableRuleListItem(
         confirmValueChange = { dismissValue ->
             if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
                 onDelete()
-                true
+                // Return false to prevent auto-dismiss, let the dialog handle it
+                false
             } else {
                 false
             }
         }
     )
 
+    // Reset the dismiss state when the dialog is dismissed without confirming
+    // This happens when showDeleteDialog becomes false for this specific rule
+    LaunchedEffect(showDeleteDialog, isRuleToDelete) {
+        if (!showDeleteDialog && dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+            dismissState.reset()
+        }
+    }
+
     SwipeToDismissBox(
         state = dismissState,
+        enableDismissFromEndToStart = true,
+        enableDismissFromStartToEnd = false,
         backgroundContent = {
             // Red background when swiping
             Box(
