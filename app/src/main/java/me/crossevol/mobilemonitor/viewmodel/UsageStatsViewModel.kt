@@ -60,8 +60,8 @@ class UsageStatsViewModel(
                 // Update selected filter
                 _selectedFilter.value = filter
                 
-                // Check permissions first
-                if (!repository.hasUsageStatsPermission()) {
+                // Check both permissions first
+                if (!repository.hasUsageStatsPermission() || !repository.hasOverlayPermission()) {
                     _uiState.value = UsageStatsState.PermissionRequired
                     return@launch
                 }
@@ -123,16 +123,19 @@ class UsageStatsViewModel(
      * Checks current permission status and updates UI state accordingly
      * 
      * Should be called when returning from system settings or when app resumes.
-     * If permission is granted, automatically refreshes data.
+     * If both permissions are granted, automatically refreshes data.
      */
     fun checkPermissions() {
         viewModelScope.launch {
             try {
-                if (repository.hasUsageStatsPermission()) {
-                    // Permission is now available, refresh data
+                val hasUsageStats = repository.hasUsageStatsPermission()
+                val hasOverlay = repository.hasOverlayPermission()
+                
+                if (hasUsageStats && hasOverlay) {
+                    // Both permissions are now available, refresh data
                     refreshData()
                 } else {
-                    // Permission still not granted
+                    // One or both permissions still not granted
                     _uiState.value = UsageStatsState.PermissionRequired
                 }
             } catch (e: Exception) {

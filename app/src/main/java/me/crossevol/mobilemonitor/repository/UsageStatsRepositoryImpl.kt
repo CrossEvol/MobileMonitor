@@ -86,6 +86,18 @@ class UsageStatsRepositoryImpl(
         }
     }
     
+    override fun hasOverlayPermission(): Boolean {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                android.provider.Settings.canDrawOverlays(context)
+            } else {
+                true // Not needed on older versions
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
     override suspend fun getAppInfo(packageName: String): AppUsageInfo? = 
         withContext(Dispatchers.IO) {
             try {

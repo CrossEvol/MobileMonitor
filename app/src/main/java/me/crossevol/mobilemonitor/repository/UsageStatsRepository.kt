@@ -24,6 +24,13 @@ interface UsageStatsRepository {
     fun hasUsageStatsPermission(): Boolean
     
     /**
+     * Checks if the app has overlay permission (display over other apps)
+     * 
+     * @return true if permission is granted, false otherwise
+     */
+    fun hasOverlayPermission(): Boolean
+    
+    /**
      * Retrieves app metadata (name and icon) for a given package name
      * 
      * @param packageName The package name of the application
