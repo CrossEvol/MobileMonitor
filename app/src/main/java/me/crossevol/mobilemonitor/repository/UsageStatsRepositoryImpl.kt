@@ -98,6 +98,23 @@ class UsageStatsRepositoryImpl(
         }
     }
     
+    override fun hasAccessibilityPermission(): Boolean {
+        return try {
+            val accessibilityManager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+            val enabledServices = accessibilityManager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            
+            for (service in enabledServices) {
+                if (service.resolveInfo.serviceInfo.packageName == context.packageName &&
+                    service.resolveInfo.serviceInfo.name.endsWith("AppMonitoringService")) {
+                    return true
+                }
+            }
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
     override suspend fun getAppInfo(packageName: String): AppUsageInfo? = 
         withContext(Dispatchers.IO) {
             try {

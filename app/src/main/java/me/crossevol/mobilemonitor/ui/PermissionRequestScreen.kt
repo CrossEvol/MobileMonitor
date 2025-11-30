@@ -54,11 +54,13 @@ fun PermissionRequestScreen(
 ) {
     val context = LocalContext.current
     var hasOverlayPermission by remember { mutableStateOf(checkOverlayPermission(context)) }
+    var hasAccessibilityPermission by remember { mutableStateOf(checkAccessibilityPermission(context)) }
     
     // Recheck permission when returning to the screen
     DisposableEffect(Unit) {
         onDispose {
             hasOverlayPermission = checkOverlayPermission(context)
+            hasAccessibilityPermission = checkAccessibilityPermission(context)
         }
     }
     
@@ -82,7 +84,7 @@ fun PermissionRequestScreen(
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = "Permission required",
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
                 
@@ -96,13 +98,13 @@ fun PermissionRequestScreen(
                 
                 // Description
                 Text(
-                    text = "This app needs the following permissions to function properly:",
+                    text = "This app needs the following permissions",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 
                 // Usage Stats Permission Section
                 PermissionItem(
@@ -112,12 +114,12 @@ fun PermissionRequestScreen(
                     onGrant = onOpenSettings
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 
                 // Overlay Permission Section
                 PermissionItem(
                     title = "Display over other apps",
-                    description = "Required to block apps when time limits are exceeded",
+                    description = "Required to block apps ",
                     isGranted = hasOverlayPermission,
                     onGrant = {
                         openOverlaySettings(context)
@@ -128,7 +130,23 @@ fun PermissionRequestScreen(
                     }
                 )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Accessibility Permission Section
+                PermissionItem(
+                    title = "Accessibility Service",
+                    description = "Required to detect when restricted apps are launched",
+                    isGranted = hasAccessibilityPermission,
+                    onGrant = {
+                        openAccessibilitySettings(context)
+                        // Recheck after a delay when user returns
+                        (context as? Activity)?.window?.decorView?.postDelayed({
+                            hasAccessibilityPermission = checkAccessibilityPermission(context)
+                        }, 1000)
+                    }
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 // Retry button
                 OutlinedButton(
@@ -238,6 +256,32 @@ private fun openOverlaySettings(context: android.content.Context) {
         }
         context.startActivity(intent)
     }
+}
+
+/**
+ * Check if accessibility permission is granted
+ */
+private fun checkAccessibilityPermission(context: android.content.Context): Boolean {
+    val accessibilityManager = context.getSystemService(android.content.Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+    val enabledServices = accessibilityManager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+    
+    for (service in enabledServices) {
+        if (service.resolveInfo.serviceInfo.packageName == context.packageName &&
+            service.resolveInfo.serviceInfo.name.endsWith("AppMonitoringService")) {
+            return true
+        }
+    }
+    return false
+}
+
+/**
+ * Open accessibility settings
+ */
+private fun openAccessibilitySettings(context: android.content.Context) {
+    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+    context.startActivity(intent)
 }
 
 @Preview(showBackground = true)

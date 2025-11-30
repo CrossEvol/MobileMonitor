@@ -31,6 +31,13 @@ interface UsageStatsRepository {
     fun hasOverlayPermission(): Boolean
     
     /**
+     * Checks if the app's accessibility service is enabled
+     * 
+     * @return true if service is enabled, false otherwise
+     */
+    fun hasAccessibilityPermission(): Boolean
+    
+    /**
      * Retrieves app metadata (name and icon) for a given package name
      * 
      * @param packageName The package name of the application
