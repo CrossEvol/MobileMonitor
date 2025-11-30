@@ -220,6 +220,14 @@ class AppRestrictionRepositoryImpl(
         }
     }
 
+    override suspend fun deleteAllRulesForApp(appId: Long) {
+        try {
+            appRuleDao.deleteAllRulesByAppId(appId)
+        } catch (e: Exception) {
+            throw DatabaseException("Failed to delete all rules for app ID: $appId", e)
+        }
+    }
+
     // Monitoring operations
     override suspend fun checkRestriction(packageName: String): RestrictionResult {
         return try {

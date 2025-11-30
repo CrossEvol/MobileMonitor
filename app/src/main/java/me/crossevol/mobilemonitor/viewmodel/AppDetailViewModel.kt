@@ -28,7 +28,8 @@ data class AppDetailUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showDeleteDialog: Boolean = false,
-    val ruleToDelete: AppRule? = null
+    val ruleToDelete: AppRule? = null,
+    val showDeleteAllDialog: Boolean = false
 )
 
 /**
@@ -177,6 +178,37 @@ class AppDetailViewModel(
                     error = e.message ?: "Failed to delete rule",
                     showDeleteDialog = false,
                     ruleToDelete = null
+                )
+            }
+        }
+    }
+
+    /**
+     * Show the delete all confirmation dialog
+     */
+    fun showDeleteAllDialog() {
+        _uiState.value = _uiState.value.copy(showDeleteAllDialog = true)
+    }
+
+    /**
+     * Hide the delete all confirmation dialog
+     */
+    fun hideDeleteAllDialog() {
+        _uiState.value = _uiState.value.copy(showDeleteAllDialog = false)
+    }
+
+    /**
+     * Confirm deletion of all rules for the current app
+     */
+    fun confirmDeleteAllRules() {
+        viewModelScope.launch {
+            try {
+                repository.deleteAllRulesForApp(currentAppId)
+                hideDeleteAllDialog()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to delete all rules",
+                    showDeleteAllDialog = false
                 )
             }
         }

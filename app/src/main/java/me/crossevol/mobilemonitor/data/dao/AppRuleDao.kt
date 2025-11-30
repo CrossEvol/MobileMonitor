@@ -34,4 +34,7 @@ interface AppRuleDao {
     
     @Delete
     suspend fun deleteRule(rule: AppRuleEntity)
+    
+    @Query("DELETE FROM app_rule WHERE app_info_id = :appId")
+    suspend fun deleteAllRulesByAppId(appId: Long)
 }

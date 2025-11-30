@@ -141,9 +141,11 @@ fun AppDetailScreen(
                         rules = uiState.rules,
                         showDeleteDialog = uiState.showDeleteDialog,
                         ruleToDelete = uiState.ruleToDelete,
+                        showDeleteAllDialog = uiState.showDeleteAllDialog,
                         onToggleEnabled = { enabled -> viewModel.toggleAppEnabled(enabled) },
                         onRuleClick = onNavigateToEditRule,
-                        onRuleDelete = { rule -> viewModel.showDeleteDialog(rule) }
+                        onRuleDelete = { rule -> viewModel.showDeleteDialog(rule) },
+                        onDeleteAllRules = { viewModel.showDeleteAllDialog() }
                     )
                 }
             }
@@ -158,6 +160,14 @@ fun AppDetailScreen(
             onDismiss = { viewModel.hideDeleteDialog() }
         )
     }
+
+    // Delete all confirmation dialog
+    if (uiState.showDeleteAllDialog) {
+        DeleteAllRulesDialog(
+            onConfirm = { viewModel.confirmDeleteAllRules() },
+            onDismiss = { viewModel.hideDeleteAllDialog() }
+        )
+    }
 }
 
 /**
@@ -169,9 +179,11 @@ private fun AppDetailContent(
     rules: List<AppRule>,
     showDeleteDialog: Boolean,
     ruleToDelete: AppRule?,
+    showDeleteAllDialog: Boolean,
     onToggleEnabled: (Boolean) -> Unit,
     onRuleClick: (Long) -> Unit,
     onRuleDelete: (AppRule) -> Unit,
+    onDeleteAllRules: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -194,12 +206,30 @@ private fun AppDetailContent(
         
         // Rules section header
         item {
-            Text(
-                text = "Usage Rules",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Usage Rules",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // Only show delete all button when there are rules
+                if (rules.isNotEmpty()) {
+                    IconButton(onClick = onDeleteAllRules) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete all rules",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
         }
         
         // Rules list
@@ -598,6 +628,45 @@ private fun DeleteRuleDialog(
             TextButton(onClick = onConfirm) {
                 Text(
                     text = "Delete",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+/**
+ * Delete all rules confirmation dialog
+ */
+@Composable
+private fun DeleteAllRulesDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Delete All Rules?",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                text = "Are you sure you want to delete all rules for this app? This action cannot be undone.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = "Delete All",
                     color = MaterialTheme.colorScheme.error
                 )
             }

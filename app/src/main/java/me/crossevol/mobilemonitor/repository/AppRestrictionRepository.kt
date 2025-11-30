@@ -25,6 +25,7 @@ interface AppRestrictionRepository {
     suspend fun saveRules(rules: List<AppRule>)
     suspend fun updateRule(rule: AppRule)
     suspend fun deleteRule(ruleId: Long)
+    suspend fun deleteAllRulesForApp(appId: Long)
     
     // Monitoring operations
     suspend fun checkRestriction(packageName: String): RestrictionResult
