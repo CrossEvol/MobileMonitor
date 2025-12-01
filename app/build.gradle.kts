@@ -1,3 +1,7 @@
+import java.io.FileInputStream
+import java.util.Properties
+import kotlin.apply
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -8,18 +12,38 @@ plugins {
 
 android {
     namespace = "me.crossevol.mobilemonitor"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "me.crossevol.mobilemonitor"
         minSdk = 31
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+
+            val keystorePropertiesFile = rootProject.file("key.properties")
+
+            // Only load properties and set signing config if the file exists
+            if (keystorePropertiesFile.exists()) {
+                val properties = Properties().apply {
+                    load(FileInputStream(keystorePropertiesFile))
+                }
+                // Use rootProject.file() to resolve the path relative to the project root
+                storeFile = rootProject.file(properties.getProperty("storeFile"))
+                storePassword = properties.getProperty("storePassword")
+                keyAlias = properties.getProperty("keyAlias")
+                keyPassword = properties.getProperty("keyPassword")
+            } else {
+                println("WARNING: key.properties not found. Release signing config will not be fully configured.")
+            }
+
+        }
     }
 
     buildTypes {
@@ -29,6 +53,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Apply the signing configuration for release builds
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

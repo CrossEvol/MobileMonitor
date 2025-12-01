@@ -1,0 +1,118 @@
+name: MobileMonitor Tests & Release
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*.*.*' # Trigger on tags like v1.0.0, v2.1.3
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Run Compose Multiplatform Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        # Use actions/setup-java to install the correct JDK version
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin' # Recommended distribution
+          java-version: '17' # Match the JVM target in build.gradle.kts
+
+      - name: Setup Gradle
+        # Use the official Gradle action for caching dependencies and wrapper
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Run Tests and Checks
+        # Use the Gradle 'check' task which typically includes running tests, lint, etc.
+        # Adjust if you have a specific test task you prefer, e.g., ./gradlew :composeApp:test
+        run: ./gradlew check
+
+  build-and-release:
+    name: Build Signed Android APK and Release
+    # Only run on tag push and after tests succeed
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: test # Run after tests succeed
+    permissions:
+      contents: write # Required to create releases
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # ---- Steps for Signing ----
+      # These steps decode your base64-encoded keystore secret and create
+      # the key.properties file that Gradle will read for signing.
+      - name: Decode Keystore
+        id: decode_keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        # Create the temporary keystore file inside the composeApp module directory
+        # Use printf %s to avoid issues with newlines/whitespace in the secret
+        run: |
+          printf %s "$KEYSTORE_BASE64" | base64 --decode > $GITHUB_WORKSPACE/my-release-key.keystore
+
+      - name: Create key.properties file
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }} # Assuming this secret holds the key password
+        # Create the key.properties file inside the composeApp module directory
+        run: |
+          # Correct the storeFile path to point to the keystore location
+          echo "storeFile=my-release-key.keystore" > key.properties
+          echo "storePassword=$STORE_PASSWORD" >> key.properties
+          echo "keyAlias=$KEY_ALIAS" >> key.properties
+          echo "keyPassword=$KEY_PASSWORD" >> key.properties
+      # ---- End Steps for Signing ----
+
+      - name: Build Signed APK
+        # Use the Gradle task for building the release APK of the app module.
+        # The signing configuration in app/build.gradle.kts reads from key.properties.
+        run: ./gradlew :app:assembleRelease
+
+      - name: Verify APK Exists
+        # Check the expected output directory for the release APK
+        run: ls -l app/build/outputs/apk/release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          # Update the path to the generated release APK.
+          # Using a wildcard *.apk is safer in case the exact filename changes.
+          files: app/build/outputs/apk/release/*.apk
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GITHUB_TOKEN is automatically available
+
+      # ---- Optional: Clean up sensitive files ----
+      # It's good practice to remove the keystore and properties files
+      # from the runner's filesystem after the build.
+      - name: Clean up Keystore and Properties
+        if: always() # Run this step even if previous steps fail
+        run: |
+          rm -f my-release-key.keystore
+          rm -f key.properties
+
+
