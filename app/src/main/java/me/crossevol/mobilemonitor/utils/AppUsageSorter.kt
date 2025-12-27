@@ -32,37 +32,4 @@ object AppUsageSorter {
         )
     }
     
-    /**
-     * Checks if the given list is properly sorted according to the usage sorting rules.
-     * This can be used for validation and testing purposes.
-     * 
-     * @param apps The list to check
-     * @return true if the list is properly sorted, false otherwise
-     */
-    fun isSortedByUsage(apps: List<AppUsageInfo>): Boolean {
-        if (apps.size <= 1) return true
-        
-        for (i in 0 until apps.size - 1) {
-            val current = apps[i]
-            val next = apps[i + 1]
-            
-            // Check if zero usage apps are at the bottom
-            if (current.totalTimeInForeground == 0L && next.totalTimeInForeground > 0L) {
-                return false
-            }
-            
-            // Check if usage time is in descending order
-            if (current.totalTimeInForeground < next.totalTimeInForeground) {
-                return false
-            }
-            
-            // Check secondary sorting by last used time for same usage time
-            if (current.totalTimeInForeground == next.totalTimeInForeground &&
-                current.lastTimeUsed < next.lastTimeUsed) {
-                return false
-            }
-        }
-        
-        return true
-    }
 }

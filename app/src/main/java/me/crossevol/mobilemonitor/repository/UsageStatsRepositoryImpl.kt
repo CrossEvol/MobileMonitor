@@ -207,7 +207,7 @@ class UsageStatsRepositoryImpl(
     /**
      * Builds a list of AppUsageInfo from aggregated usage data
      */
-    private suspend fun buildAppUsageInfoList(
+    private fun buildAppUsageInfoList(
         aggregatedStats: Map<String, AggregatedUsageData>
     ): List<AppUsageInfo> {
         return aggregatedStats.mapNotNull { (packageName, usageData) ->
@@ -279,34 +279,6 @@ class UsageStatsRepositoryImpl(
         // This is a good proxy for "user-facing" apps.
         return !hasLauncherIntent
     }
-    
-    /**
-     * Checks if an app is a system app
-     */
-    private fun isSystemApp(applicationInfo: ApplicationInfo): Boolean {
-        return (applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-    }
-    
-    /**
-     * Debug method to get all apps with usage data (including filtered ones)
-     * This can help diagnose filtering issues
-     */
-    suspend fun getAllAppsWithUsageDebug(timeFilter: TimeFilter): List<String> = 
-        withContext(Dispatchers.IO) {
-            try {
-                if (!hasUsageStatsPermission()) {
-                    return@withContext emptyList()
-                }
-                
-                val (startTime, endTime) = calculateTimeRange(timeFilter)
-                val interval = getUsageStatsInterval(timeFilter)
-                val usageStats = usageStatsManager.queryUsageStats(interval, startTime, endTime)
-                
-                usageStats?.map { "${it.packageName} - ${it.totalTimeInForeground}ms" } ?: emptyList()
-            } catch (e: Exception) {
-                emptyList()
-            }
-        }
     
     /**
      * Data class to hold aggregated usage statistics
