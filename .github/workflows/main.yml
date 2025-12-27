@@ -91,6 +91,9 @@ jobs:
         # The signing configuration in app/build.gradle.kts reads from key.properties.
         run: ./gradlew :app:assembleRelease
 
+      - name: Rename APK
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/monitor.apk
+
       - name: Verify APK Exists
         # Check the expected output directory for the release APK
         run: ls -l app/build/outputs/apk/release/
