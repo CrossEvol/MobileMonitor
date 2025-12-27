@@ -1,11 +1,10 @@
 package me.crossevol.mobilemonitor.service
 
-import android.util.Log
-
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder

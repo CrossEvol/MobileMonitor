@@ -1,6 +1,5 @@
 package me.crossevol.mobilemonitor.navigation
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -113,7 +112,7 @@ fun AppNavHost(
             
             // Get or create app by package name
             val viewModel: AppDetailViewModel = viewModel(
-                factory = AppDetailViewModelFactory(packageName, repository)
+                factory = AppDetailViewModelFactory(packageName, repository, context)
             )
             
             AppDetailScreen(

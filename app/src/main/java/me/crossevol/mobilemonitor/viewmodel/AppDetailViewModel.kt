@@ -1,15 +1,17 @@
 package me.crossevol.mobilemonitor.viewmodel
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import me.crossevol.mobilemonitor.model.AppInfo
 import me.crossevol.mobilemonitor.model.AppRule
+import me.crossevol.mobilemonitor.model.ViewMode
 import me.crossevol.mobilemonitor.repository.AppRestrictionRepository
 
 /**
@@ -21,6 +23,7 @@ import me.crossevol.mobilemonitor.repository.AppRestrictionRepository
  * @param error Error message if loading failed
  * @param showDeleteDialog Whether to show the delete confirmation dialog
  * @param ruleToDelete The rule pending deletion
+ * @param viewMode Current view mode (list or grid)
  */
 data class AppDetailUiState(
     val app: AppInfo? = null,
@@ -29,22 +32,37 @@ data class AppDetailUiState(
     val error: String? = null,
     val showDeleteDialog: Boolean = false,
     val ruleToDelete: AppRule? = null,
-    val showDeleteAllDialog: Boolean = false
+    val showDeleteAllDialog: Boolean = false,
+    val viewMode: ViewMode = ViewMode.LIST
 )
 
 /**
  * ViewModel for the app detail screen
  * Manages app information, rules list, and user interactions
+ * Supports view mode persistence using SharedPreferences
  * 
  * @param packageName The package name of the app to display (will create if not exists)
  * @param repository Repository for app restriction operations
+ * @param context Application context for accessing SharedPreferences
  */
 class AppDetailViewModel(
     private val packageName: String,
-    private val repository: AppRestrictionRepository
+    private val repository: AppRestrictionRepository,
+    private val context: Context
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AppDetailUiState(isLoading = true))
+    companion object {
+        private const val PREFS_NAME = "app_detail_prefs"
+        private const val KEY_VIEW_MODE = "view_mode"
+    }
+
+    private val sharedPreferences: SharedPreferences = 
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    private val _uiState = MutableStateFlow(AppDetailUiState(
+        isLoading = true,
+        viewMode = getPersistedViewMode()
+    ))
     val uiState: StateFlow<AppDetailUiState> = _uiState.asStateFlow()
     
     private var currentAppId: Long = 0
@@ -56,10 +74,14 @@ class AppDetailViewModel(
     /**
      * Load app information and rules from the repository
      * Creates a new app entry if it doesn't exist
+     * Sets up reactive data flow for automatic UI updates
      */
     private fun loadAppDetails() {
         viewModelScope.launch {
-            _uiState.value = AppDetailUiState(isLoading = true)
+            _uiState.value = AppDetailUiState(
+                isLoading = true,
+                viewMode = getPersistedViewMode()
+            )
             
             try {
                 // Try to load existing app by package name
@@ -89,18 +111,20 @@ class AppDetailViewModel(
                 if (app == null) {
                     _uiState.value = AppDetailUiState(
                         isLoading = false,
-                        error = "Failed to load app"
+                        error = "Failed to load app",
+                        viewMode = getPersistedViewMode()
                     )
                     return@launch
                 }
                 
-                // Combine app info with rules flow
+                // Set up reactive data flow - rules will automatically update UI when changed
                 repository.getRulesForApp(currentAppId)
                     .catch { exception ->
                         _uiState.value = AppDetailUiState(
                             app = app,
                             isLoading = false,
-                            error = exception.message ?: "Failed to load rules"
+                            error = exception.message ?: "Failed to load rules",
+                            viewMode = _uiState.value.viewMode
                         )
                     }
                     .collect { rules ->
@@ -114,7 +138,8 @@ class AppDetailViewModel(
             } catch (e: Exception) {
                 _uiState.value = AppDetailUiState(
                     isLoading = false,
-                    error = e.message ?: "Failed to load app details"
+                    error = e.message ?: "Failed to load app details",
+                    viewMode = getPersistedViewMode()
                 )
             }
         }
@@ -226,5 +251,48 @@ class AppDetailViewModel(
      */
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+    
+    /**
+     * Toggle between list and grid view modes
+     * Persists the selected view mode to SharedPreferences
+     */
+    fun toggleViewMode() {
+        val currentMode = _uiState.value.viewMode
+        val newMode = when (currentMode) {
+            ViewMode.LIST -> ViewMode.GRID
+            ViewMode.GRID -> ViewMode.LIST
+        }
+        
+        // Update UI state
+        _uiState.value = _uiState.value.copy(viewMode = newMode)
+        
+        // Persist the view mode preference
+        persistViewMode(newMode)
+    }
+    
+    /**
+     * Get the persisted view mode from SharedPreferences
+     * 
+     * @return The persisted ViewMode, defaults to LIST if not found
+     */
+    private fun getPersistedViewMode(): ViewMode {
+        val modeString = sharedPreferences.getString(KEY_VIEW_MODE, ViewMode.LIST.name)
+        return try {
+            ViewMode.valueOf(modeString ?: ViewMode.LIST.name)
+        } catch (e: IllegalArgumentException) {
+            ViewMode.LIST
+        }
+    }
+    
+    /**
+     * Persist the view mode to SharedPreferences
+     * 
+     * @param viewMode The ViewMode to persist
+     */
+    private fun persistViewMode(viewMode: ViewMode) {
+        sharedPreferences.edit()
+            .putString(KEY_VIEW_MODE, viewMode.name)
+            .apply()
     }
 }

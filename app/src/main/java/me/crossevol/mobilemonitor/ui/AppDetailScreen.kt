@@ -1,8 +1,5 @@
 package me.crossevol.mobilemonitor.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,12 +52,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import me.crossevol.mobilemonitor.model.AppInfo
 import me.crossevol.mobilemonitor.model.AppRule
+import me.crossevol.mobilemonitor.model.ViewMode
 import me.crossevol.mobilemonitor.viewmodel.AppDetailViewModel
 import java.time.format.DateTimeFormatter
 
 /**
  * App detail screen displaying app information and usage rules
- * 
+ *
  * @param viewModel ViewModel managing the app detail state
  * @param onNavigateBack Callback when user presses back
  * @param onNavigateToAddRule Callback when user wants to add a new rule
@@ -126,26 +124,30 @@ fun AppDetailScreen(
                 .padding(paddingValues)
         ) {
             when {
-                uiState.isLoading -> {
+                uiState.isLoading                            -> {
                     LoadingScreen()
                 }
+
                 uiState.error != null && uiState.app == null -> {
                     ErrorScreen(
                         errorMessage = uiState.error ?: "Unknown error",
                         onRetry = { viewModel.retry() }
                     )
                 }
-                uiState.app != null -> {
+
+                uiState.app != null                          -> {
                     AppDetailContent(
                         app = uiState.app!!,
                         rules = uiState.rules,
+                        viewMode = uiState.viewMode,
                         showDeleteDialog = uiState.showDeleteDialog,
                         ruleToDelete = uiState.ruleToDelete,
                         showDeleteAllDialog = uiState.showDeleteAllDialog,
                         onToggleEnabled = { enabled -> viewModel.toggleAppEnabled(enabled) },
                         onRuleClick = onNavigateToEditRule,
                         onRuleDelete = { rule -> viewModel.showDeleteDialog(rule) },
-                        onDeleteAllRules = { viewModel.showDeleteAllDialog() }
+                        onDeleteAllRules = { viewModel.showDeleteAllDialog() },
+                        onToggleViewMode = { viewModel.toggleViewMode() }
                     )
                 }
             }
@@ -171,12 +173,13 @@ fun AppDetailScreen(
 }
 
 /**
- * Main content displaying app information and rules list
+ * Main content displaying app information and rules list or time grid
  */
 @Composable
 private fun AppDetailContent(
     app: AppInfo,
     rules: List<AppRule>,
+    viewMode: ViewMode,
     showDeleteDialog: Boolean,
     ruleToDelete: AppRule?,
     showDeleteAllDialog: Boolean,
@@ -184,77 +187,149 @@ private fun AppDetailContent(
     onRuleClick: (Long) -> Unit,
     onRuleDelete: (AppRule) -> Unit,
     onDeleteAllRules: () -> Unit,
+    onToggleViewMode: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        
-        // App information header
-        item {
-            AppInfoHeader(
-                app = app,
-                onToggleEnabled = onToggleEnabled
-            )
-        }
-        
-        // Rules section header
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    when (viewMode) {
+        ViewMode.LIST -> {
+            // Use LazyColumn for list view
+            LazyColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Usage Rules",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                // Only show delete all button when there are rules
-                if (rules.isNotEmpty()) {
-                    IconButton(onClick = onDeleteAllRules) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete all rules",
-                            tint = MaterialTheme.colorScheme.error
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // App information header
+                item {
+                    AppInfoHeader(
+                        app = app,
+                        onToggleEnabled = onToggleEnabled
+                    )
+                }
+
+                // Rules section header with view toggle
+                item {
+                    RulesSectionHeader(
+                        rules = rules,
+                        viewMode = viewMode,
+                        onToggleViewMode = onToggleViewMode,
+                        onDeleteAllRules = onDeleteAllRules
+                    )
+                }
+
+                // Rules list view
+                if (rules.isEmpty()) {
+                    item {
+                        EmptyRulesMessage()
+                    }
+                } else {
+                    items(
+                        rules,
+                        key = { it.id }) { rule ->
+                        SwipeableRuleListItem(
+                            rule = rule,
+                            showDeleteDialog = showDeleteDialog,
+                            isRuleToDelete = ruleToDelete?.id == rule.id,
+                            onClick = { onRuleClick(rule.id) },
+                            onDelete = { onRuleDelete(rule) }
                         )
                     }
                 }
+
+                item {
+                    Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
+                }
             }
         }
-        
-        // Rules list
-        if (rules.isEmpty()) {
-            item {
-                EmptyRulesMessage()
-            }
-        } else {
-            items(rules, key = { it.id }) { rule ->
-                SwipeableRuleListItem(
-                    rule = rule,
-                    showDeleteDialog = showDeleteDialog,
-                    isRuleToDelete = ruleToDelete?.id == rule.id,
-                    onClick = { onRuleClick(rule.id) },
-                    onDelete = { onRuleDelete(rule) }
+
+        ViewMode.GRID -> {
+            // Use Column for grid view to avoid nested scrolling
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // App information header
+                AppInfoHeader(
+                    app = app,
+                    onToggleEnabled = onToggleEnabled
                 )
+
+                // Rules section header with view toggle
+                RulesSectionHeader(
+                    rules = rules,
+                    viewMode = viewMode,
+                    onToggleViewMode = onToggleViewMode,
+                    onDeleteAllRules = onDeleteAllRules
+                )
+
+                // Time grid view
+                TimeGridView(
+                    rules = rules,
+                    modifier = Modifier.weight(1f) // Take remaining space
+                )
+
+                Spacer(modifier = Modifier.height(24.dp)) // Space for FAB
             }
-        }
-        
-        item {
-            Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
         }
     }
 }
 
+
+/**
+ * Rules section header with view toggle and delete all button
+ */
+@Composable
+private fun RulesSectionHeader(
+    rules: List<AppRule>,
+    viewMode: ViewMode,
+    onToggleViewMode: () -> Unit,
+    onDeleteAllRules: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Usage Rules",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Only show delete all button when there are rules
+            if (rules.isNotEmpty()) {
+                // View toggle button
+                ViewToggleButton(
+                    currentViewMode = viewMode,
+                    onToggle = onToggleViewMode
+                )
+
+                IconButton(onClick = onDeleteAllRules) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete all rules",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
 
 /**
  * App information header with icon, name, and enable toggle
@@ -311,9 +386,9 @@ private fun AppInfoHeader(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 // App name and package
                 Column(
                     modifier = Modifier.weight(1f)
@@ -325,9 +400,9 @@ private fun AppInfoHeader(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    
+
                     Spacer(modifier = Modifier.height(4.dp))
-                    
+
                     Text(
                         text = app.packageName,
                         style = MaterialTheme.typography.bodyMedium,
@@ -337,9 +412,9 @@ private fun AppInfoHeader(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Usage statistics
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -351,7 +426,7 @@ private fun AppInfoHeader(
                         value = formatDuration(app.totalTimeInForeground)
                     )
                 }
-                
+
                 if (app.lastTimeUsed > 0) {
                     UsageStatItem(
                         label = "Last Used",
@@ -359,9 +434,9 @@ private fun AppInfoHeader(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Enable/Disable toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -384,7 +459,7 @@ private fun AppInfoHeader(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 Switch(
                     checked = app.enabled,
                     onCheckedChange = onToggleEnabled
@@ -443,9 +518,9 @@ private fun EmptyRulesMessage(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "Tap the + button to add your first usage rule",
                 style = MaterialTheme.typography.bodyMedium,
@@ -483,7 +558,10 @@ private fun SwipeableRuleListItem(
 
     // Reset the dismiss state when the dialog is dismissed without confirming
     // This happens when showDeleteDialog becomes false for this specific rule
-    LaunchedEffect(showDeleteDialog, isRuleToDelete) {
+    LaunchedEffect(
+        showDeleteDialog,
+        isRuleToDelete
+    ) {
         if (!showDeleteDialog && dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
             dismissState.reset()
         }
@@ -554,9 +632,9 @@ private fun RuleListItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 // Time range
                 val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
                 Text(
@@ -564,9 +642,9 @@ private fun RuleListItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 // Restrictions
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -578,7 +656,7 @@ private fun RuleListItem(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    
+
                     if (rule.totalCount > 0) {
                         Text(
                             text = "Count: ${rule.totalCount}",
@@ -586,7 +664,7 @@ private fun RuleListItem(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    
+
                     if (rule.totalTime == 0 && rule.totalCount == 0) {
                         Text(
                             text = "No limits",
@@ -620,7 +698,9 @@ private fun DeleteRuleDialog(
         },
         text = {
             Text(
-                text = "Are you sure you want to delete this rule for ${rule.day.name.lowercase().replaceFirstChar { it.uppercase() }}? This action cannot be undone.",
+                text = "Are you sure you want to delete this rule for ${
+                    rule.day.name.lowercase().replaceFirstChar { it.uppercase() }
+                }? This action cannot be undone.",
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -686,11 +766,11 @@ private fun formatDuration(millis: Long): String {
     val seconds = millis / 1000
     val minutes = seconds / 60
     val hours = minutes / 60
-    
+
     return when {
-        hours > 0 -> "${hours}h ${minutes % 60}m"
+        hours > 0   -> "${hours}h ${minutes % 60}m"
         minutes > 0 -> "${minutes}m"
-        else -> "${seconds}s"
+        else        -> "${seconds}s"
     }
 }
 
@@ -700,16 +780,16 @@ private fun formatDuration(millis: Long): String {
 private fun formatLastUsed(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
-    
+
     val seconds = diff / 1000
     val minutes = seconds / 60
     val hours = minutes / 60
     val days = hours / 24
-    
+
     return when {
-        days > 0 -> "${days}d ago"
-        hours > 0 -> "${hours}h ago"
+        days > 0    -> "${days}d ago"
+        hours > 0   -> "${hours}h ago"
         minutes > 0 -> "${minutes}m ago"
-        else -> "Just now"
+        else        -> "Just now"
     }
 }

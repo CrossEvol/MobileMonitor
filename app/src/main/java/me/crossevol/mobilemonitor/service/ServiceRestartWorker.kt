@@ -1,7 +1,6 @@
 package me.crossevol.mobilemonitor.service
 
 import android.content.Context
-import android.content.Intent
 import android.provider.Settings
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
